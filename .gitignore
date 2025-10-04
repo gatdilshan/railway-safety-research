@@ -26,3 +26,13 @@ backend.zip
 # Render specific
 .render-buildpacks/
 
+# Environment variables
+.env
+.env.*
+
+# Build files
+__pycache__/
+*.pyc
+dist/
+build/
+
