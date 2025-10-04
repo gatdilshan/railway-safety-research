@@ -1,11 +1,9 @@
 services:
   - type: web
-    name: gps-tracker-api
+    name: railway-safety-api
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
-      - key: PORT
-        value: 10000
+        value: 3.11.4  # Use a more stable Python version
