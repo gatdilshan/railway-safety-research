@@ -12,7 +12,7 @@ const char* password = "11111111";
 // const char* mongoAPIEndpoint = "http://127.0.0.1:8000/api/gps";  // ❌ This won't work from ESP32!
 // Replace YOUR_SERVER_IP with your computer's IP address (use 'ipconfig' on Windows)
 // Example: "http://192.168.1.100:8000/api/gps"
-const char* mongoAPIEndpoint = "http://172.20.10.5:8000/api/gps";  // Your computer's IP
+const char* mongoAPIEndpoint = "https://railway-safety-research.onrender.com/api/gps";  // Your computer's IP
 // The FastAPI server now runs on port 8000  
 
 // ==== GPS ====
