@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPS Tracker Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .card h2 {
+        color: #667eea;
+        margin-bottom: 15px;
+        font-size: 1.5em;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 10px;
+      }
+
+      #map {
+        height: 500px;
+        width: 100%;
+        border-radius: 8px;
+        margin-top: 15px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .stat-box .label {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-bottom: 5px;
+      }
+
+      .stat-box .value {
+        font-size: 1.8em;
+        font-weight: bold;
+      }
+
+      #dataTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+
+      #dataTable th,
+      #dataTable td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      #dataTable th {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+      }
+
+      #dataTable tr:hover {
+        background: #f5f5f5;
+      }
+
+      .refresh-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        margin-top: 15px;
+        transition: transform 0.2s;
+      }
+
+      .refresh-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .status {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.9em;
+        font-weight: 600;
+      }
+
+      .status.online {
+        background: #4caf50;
+        color: white;
+      }
+
+      .status.offline {
+        background: #f44336;
+        color: white;
+      }
+
+      @media (max-width: 768px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+        .stats {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📡 GPS Tracker Dashboard</h1>
+
+      <div class="dashboard">
+        <div class="card">
+          <h2>📍 Live Location</h2>
+          <div id="map"></div>
+        </div>
+
+        <div class="card">
+          <h2>📊 Statistics</h2>
+          <div class="stats">
+            <div class="stat-box">
+              <div class="label">Latitude</div>
+              <div class="value" id="latValue">--</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Longitude</div>
+              <div class="value" id="lonValue">--</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">Satellites</div>
+              <div class="value" id="satValue">--</div>
+            </div>
+            <div class="stat-box">
+              <div class="label">HDOP</div>
+              <div class="value" id="hdopValue">--</div>
+            </div>
+          </div>
+          <p style="margin-top: 20px; text-align: center">
+            <strong>Status:</strong>
+            <span id="deviceStatus" class="status offline">Offline</span>
+          </p>
+          <p style="text-align: center; margin-top: 10px; color: #666">
+            Last Update: <span id="lastUpdate">Never</span>
+          </p>
+          <button class="refresh-btn" onclick="fetchGPSData()">
+            🔄 Refresh Data
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📋 Recent GPS Data</h2>
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Satellites</th>
+              <th>HDOP</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="5" style="text-align: center; color: #999">
+                Loading data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const API_URL = "http://localhost:8000/api/gps";
+      let map, marker;
+
+      // Initialize map
+      function initMap() {
+        map = L.map("map").setView([6.9271, 79.8612], 13); // Default: Colombo, Sri Lanka
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map);
+
+        marker = L.marker([6.9271, 79.8612])
+          .addTo(map)
+          .bindPopup("Waiting for GPS data...")
+          .openPopup();
+      }
+
+      // Fetch GPS data from backend
+      async function fetchGPSData() {
+        try {
+          const response = await fetch(API_URL + "?limit=20");
+          const result = await response.json();
+
+          if (result.success && result.data.length > 0) {
+            const latestData = result.data[0];
+            updateDashboard(latestData);
+            updateTable(result.data);
+
+            // Update device status
+            const timeDiff =
+              Date.now() - new Date(latestData.received_at).getTime();
+            const statusElement = document.getElementById("deviceStatus");
+            if (timeDiff < 60000) {
+              // Less than 1 minute
+              statusElement.textContent = "Online";
+              statusElement.className = "status online";
+            } else {
+              statusElement.textContent = "Offline";
+              statusElement.className = "status offline";
+            }
+          } else {
+            console.log("No GPS data available yet");
+          }
+        } catch (error) {
+          console.error("Error fetching GPS data:", error);
+        }
+      }
+
+      // Update dashboard with latest data
+      function updateDashboard(data) {
+        document.getElementById("latValue").textContent =
+          data.latitude.toFixed(6);
+        document.getElementById("lonValue").textContent =
+          data.longitude.toFixed(6);
+        document.getElementById("satValue").textContent = data.satellites;
+        document.getElementById("hdopValue").textContent = data.hdop.toFixed(2);
+        document.getElementById("lastUpdate").textContent = new Date(
+          data.received_at
+        ).toLocaleString();
+
+        // Update map
+        const lat = data.latitude;
+        const lon = data.longitude;
+        map.setView([lat, lon], 15);
+        marker
+          .setLatLng([lat, lon])
+          .bindPopup(
+            `<b>Device: ${data.device_id}</b><br>
+                           Lat: ${lat.toFixed(6)}<br>
+                           Lon: ${lon.toFixed(6)}<br>
+                           Satellites: ${data.satellites}<br>
+                           Time: ${data.timestamp}`
+          )
+          .openPopup();
+      }
+
+      // Update table with recent data
+      function updateTable(dataArray) {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+
+        dataArray.forEach((data) => {
+          const row = tbody.insertRow();
+          row.innerHTML = `
+                    <td>${data.timestamp}</td>
+                    <td>${data.latitude.toFixed(6)}</td>
+                    <td>${data.longitude.toFixed(6)}</td>
+                    <td>${data.satellites}</td>
+                    <td>${data.hdop.toFixed(2)}</td>
+                `;
+        });
+      }
+
+      // Initialize
+      initMap();
+      fetchGPSData();
+
+      // Auto-refresh every 15 seconds
+      setInterval(fetchGPSData, 15000);
+    </script>
+  </body>
+</html>
