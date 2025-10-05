@@ -265,6 +265,45 @@ async def get_gps_data_by_device(device_id: str, limit: int = 100):
             detail=f"Failed to fetch GPS data: {str(e)}"
         )
 
+@app.get("/api/devices")
+async def get_devices():
+    """
+    Get list of all unique device IDs that have sent data
+    """
+    try:
+        # Get distinct device IDs from the collection
+        device_ids = collection.distinct("device_id")
+        
+        # Get last update time for each device
+        devices = []
+        for device_id in device_ids:
+            last_data = collection.find_one(
+                {"device_id": device_id},
+                sort=[("received_at", -1)]
+            )
+            if last_data:
+                devices.append({
+                    "device_id": device_id,
+                    "last_seen": last_data.get("received_at", datetime.utcnow()),
+                    "last_location": {
+                        "latitude": last_data.get("latitude"),
+                        "longitude": last_data.get("longitude")
+                    }
+                })
+        
+        return {
+            "success": True,
+            "count": len(devices),
+            "devices": devices
+        }
+    
+    except Exception as e:
+        print(f"Error fetching devices: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch devices: {str(e)}"
+        )
+
 # ==== Train Details API Routes ====
 
 @app.get("/api/train/status")

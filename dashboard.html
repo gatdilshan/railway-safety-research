@@ -71,7 +71,7 @@
 
       .stats {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 15px;
         margin-top: 15px;
       }
@@ -860,6 +860,50 @@
 
             <div class="card">
               <h2>📊 Statistics</h2>
+
+              <!-- Device Filter -->
+              <div
+                style="
+                  margin-bottom: 20px;
+                  padding: 15px;
+                  background: #f5f5f5;
+                  border-radius: 8px;
+                "
+              >
+                <label
+                  for="deviceFilter"
+                  style="
+                    font-weight: 600;
+                    color: #667eea;
+                    margin-bottom: 8px;
+                    display: block;
+                  "
+                >
+                  🆔 Select Device:
+                </label>
+                <select
+                  id="deviceFilter"
+                  onchange="filterByDevice()"
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border: 2px solid #667eea;
+                    border-radius: 6px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    background: white;
+                  "
+                >
+                  <option value="all">📡 All Devices</option>
+                </select>
+                <div
+                  id="deviceStatus"
+                  style="margin-top: 10px; font-size: 0.9rem; color: #666"
+                >
+                  Loading devices...
+                </div>
+              </div>
+
               <div class="stats">
                 <div class="stat-box">
                   <div class="label">Latitude</div>
@@ -880,6 +924,16 @@
                 <div class="stat-box">
                   <div class="label">Accuracy</div>
                   <div class="value" id="accuracyValue">--</div>
+                </div>
+                <div class="stat-box">
+                  <div class="label">Device ID</div>
+                  <div
+                    class="value"
+                    id="deviceIdValue"
+                    style="font-size: clamp(0.8rem, 2.5vw, 1.2rem)"
+                  >
+                    --
+                  </div>
                 </div>
               </div>
               <p
@@ -952,6 +1006,7 @@
               <table id="dataTable">
                 <thead>
                   <tr>
+                    <th>Device ID</th>
                     <th>Timestamp</th>
                     <th>Latitude</th>
                     <th>Longitude</th>
@@ -962,7 +1017,7 @@
                 </thead>
                 <tbody id="tableBody">
                   <tr>
-                    <td colspan="6" style="text-align: center; color: #999">
+                    <td colspan="7" style="text-align: center; color: #999">
                       Loading data...
                     </td>
                   </tr>
@@ -1094,6 +1149,7 @@
             <thead>
               <tr style="background: #667eea; color: white">
                 <th style="padding: 12px; text-align: left">#</th>
+                <th style="padding: 12px; text-align: left">Device ID</th>
                 <th style="padding: 12px; text-align: left">Timestamp</th>
                 <th style="padding: 12px; text-align: left">Latitude</th>
                 <th style="padding: 12px; text-align: left">Longitude</th>
@@ -1105,7 +1161,7 @@
             <tbody id="sessionDataTableBody">
               <tr>
                 <td
-                  colspan="7"
+                  colspan="8"
                   style="text-align: center; padding: 20px; color: #999"
                 >
                   Loading GPS data...
@@ -1129,10 +1185,14 @@
       const API_URL = window.location.origin + "/api/gps";
       const TRAIN_API_URL = window.location.origin + "/api/train/status";
       const SESSIONS_API_URL = window.location.origin + "/api/sessions";
-      let map, marker;
+      const DEVICES_API_URL = window.location.origin + "/api/devices";
+      let map;
       let sessionMap = null;
       let sessionPolyline = null;
       let sessionMarkers = [];
+      let deviceMarkers = {}; // Store markers for each device
+      let currentDeviceFilter = "all"; // Current selected device filter
+      let allDevices = []; // Store all devices
 
       // Initialize map
       function initMap() {
@@ -1142,41 +1202,220 @@
           attribution: "© OpenStreetMap contributors",
           maxZoom: 19,
         }).addTo(map);
-
-        marker = L.marker([6.9271, 79.8612])
-          .addTo(map)
-          .bindPopup("Waiting for GPS data...")
-          .openPopup();
       }
 
       // Fetch GPS data from backend
       async function fetchGPSData() {
         try {
-          const response = await fetch(API_URL + "?limit=20");
+          let url = API_URL + "?limit=100";
+
+          // If a specific device is selected, fetch only that device's data
+          if (currentDeviceFilter !== "all") {
+            url = API_URL + "/" + currentDeviceFilter + "?limit=100";
+          }
+
+          const response = await fetch(url);
           const result = await response.json();
 
           if (result.success && result.data.length > 0) {
+            // If filtering by device, show latest from that device
+            // If showing all, show latest overall
             const latestData = result.data[0];
             updateDashboard(latestData);
             updateTable(result.data);
 
-            // Update device status
-            const timeDiff =
-              Date.now() - new Date(latestData.received_at).getTime();
-            const statusElement = document.getElementById("deviceStatus");
-            if (timeDiff < 60000) {
-              // Less than 1 minute
-              statusElement.textContent = "Online";
-              statusElement.className = "status online";
-            } else {
-              statusElement.textContent = "Offline";
-              statusElement.className = "status offline";
-            }
+            // Update all device markers on map
+            updateDeviceMarkers(result.data);
           } else {
             console.log("No GPS data available yet");
           }
         } catch (error) {
           console.error("Error fetching GPS data:", error);
+        }
+      }
+
+      // Fetch and update device list
+      async function fetchDevices() {
+        try {
+          const response = await fetch(DEVICES_API_URL);
+          const result = await response.json();
+
+          if (result.success) {
+            allDevices = result.devices;
+            updateDeviceSelector(result.devices);
+            updateDeviceStatusDisplay(result.devices);
+          }
+        } catch (error) {
+          console.error("Error fetching devices:", error);
+        }
+      }
+
+      // Update device selector dropdown
+      function updateDeviceSelector(devices) {
+        const selector = document.getElementById("deviceFilter");
+        const currentValue = selector.value;
+
+        // Clear existing options except "All Devices"
+        selector.innerHTML = '<option value="all">📡 All Devices</option>';
+
+        // Add option for each device
+        devices.forEach((device) => {
+          const option = document.createElement("option");
+          option.value = device.device_id;
+          option.textContent = `🆔 ${device.device_id}`;
+          selector.appendChild(option);
+        });
+
+        // Restore previous selection if it still exists
+        if (
+          currentValue !== "all" &&
+          devices.find((d) => d.device_id === currentValue)
+        ) {
+          selector.value = currentValue;
+        }
+      }
+
+      // Update device status display
+      function updateDeviceStatusDisplay(devices) {
+        const statusDiv = document.getElementById("deviceStatus");
+        const now = Date.now();
+
+        if (devices.length === 0) {
+          statusDiv.innerHTML = "⚠️ No devices found";
+          return;
+        }
+
+        let onlineCount = 0;
+        let offlineCount = 0;
+
+        devices.forEach((device) => {
+          const timeDiff = now - new Date(device.last_seen).getTime();
+          if (timeDiff < 60000) {
+            // Less than 1 minute
+            onlineCount++;
+          } else {
+            offlineCount++;
+          }
+        });
+
+        statusDiv.innerHTML = `
+          📊 <strong>${devices.length}</strong> device(s) total | 
+          🟢 <strong>${onlineCount}</strong> online | 
+          🔴 <strong>${offlineCount}</strong> offline
+        `;
+      }
+
+      // Filter data by selected device
+      function filterByDevice() {
+        const selector = document.getElementById("deviceFilter");
+        currentDeviceFilter = selector.value;
+        fetchGPSData(); // Refresh data with new filter
+      }
+
+      // Update markers for all devices on map
+      function updateDeviceMarkers(gpsData) {
+        // Group data by device_id
+        const deviceData = {};
+        gpsData.forEach((point) => {
+          if (!deviceData[point.device_id]) {
+            deviceData[point.device_id] = [];
+          }
+          deviceData[point.device_id].push(point);
+        });
+
+        // Color palette for different devices
+        const colors = [
+          "#667eea",
+          "#f44336",
+          "#4caf50",
+          "#ff9800",
+          "#2196f3",
+          "#9c27b0",
+          "#00bcd4",
+          "#ffeb3b",
+        ];
+        let colorIndex = 0;
+
+        // Remove old markers that are no longer in the data
+        Object.keys(deviceMarkers).forEach((deviceId) => {
+          if (!deviceData[deviceId]) {
+            map.removeLayer(deviceMarkers[deviceId]);
+            delete deviceMarkers[deviceId];
+          }
+        });
+
+        // Add or update markers for each device
+        Object.keys(deviceData).forEach((deviceId) => {
+          const latestPoint = deviceData[deviceId][0]; // Most recent point
+          const color = colors[colorIndex % colors.length];
+          colorIndex++;
+
+          const lat = latestPoint.latitude;
+          const lon = latestPoint.longitude;
+          const accuracy = latestPoint.accuracy || 0;
+
+          // Create custom marker HTML
+          const markerHtml = `
+            <div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; 
+                        border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>
+          `;
+
+          if (deviceMarkers[deviceId]) {
+            // Update existing marker
+            deviceMarkers[deviceId].setLatLng([lat, lon]);
+            deviceMarkers[deviceId].setPopupContent(`
+              <b>Device: ${deviceId}</b><br>
+              Lat: ${lat.toFixed(6)}<br>
+              Lon: ${lon.toFixed(6)}<br>
+              Satellites: ${latestPoint.satellites}<br>
+              Accuracy: ${accuracy.toFixed(2)} m<br>
+              Time: ${latestPoint.timestamp}
+            `);
+          } else {
+            // Create new marker
+            const newMarker = L.marker([lat, lon], {
+              icon: L.divIcon({
+                className: "custom-device-marker",
+                html: markerHtml,
+                iconSize: [20, 20],
+              }),
+            }).addTo(map);
+
+            newMarker.bindPopup(`
+              <b>Device: ${deviceId}</b><br>
+              Lat: ${lat.toFixed(6)}<br>
+              Lon: ${lon.toFixed(6)}<br>
+              Satellites: ${latestPoint.satellites}<br>
+              Accuracy: ${accuracy.toFixed(2)} m<br>
+              Time: ${latestPoint.timestamp}
+            `);
+
+            deviceMarkers[deviceId] = newMarker;
+          }
+
+          // If this is the selected device or showing all and it's the first one, center on it
+          if (
+            currentDeviceFilter === "all" &&
+            Object.keys(deviceData)[0] === deviceId
+          ) {
+            map.setView([lat, lon], 15);
+            deviceMarkers[deviceId].openPopup();
+          } else if (currentDeviceFilter === deviceId) {
+            map.setView([lat, lon], 15);
+            deviceMarkers[deviceId].openPopup();
+          }
+        });
+
+        // If showing all devices and there are multiple, fit bounds to show all
+        if (
+          currentDeviceFilter === "all" &&
+          Object.keys(deviceData).length > 1
+        ) {
+          const allPoints = Object.values(deviceData).flat();
+          const bounds = L.latLngBounds(
+            allPoints.map((p) => [p.latitude, p.longitude])
+          );
+          map.fitBounds(bounds, { padding: [50, 50] });
         }
       }
 
@@ -1191,26 +1430,11 @@
         document.getElementById("accuracyValue").textContent = data.accuracy
           ? data.accuracy.toFixed(2) + " m"
           : "--";
+        document.getElementById("deviceIdValue").textContent =
+          data.device_id || "--";
         document.getElementById("lastUpdate").textContent = new Date(
           data.received_at
         ).toLocaleString();
-
-        // Update map
-        const lat = data.latitude;
-        const lon = data.longitude;
-        const accuracy = data.accuracy || 0;
-        map.setView([lat, lon], 15);
-        marker
-          .setLatLng([lat, lon])
-          .bindPopup(
-            `<b>Device: ${data.device_id}</b><br>
-                           Lat: ${lat.toFixed(6)}<br>
-                           Lon: ${lon.toFixed(6)}<br>
-                           Satellites: ${data.satellites}<br>
-                           Accuracy: ${accuracy.toFixed(2)} m<br>
-                           Time: ${data.timestamp}`
-          )
-          .openPopup();
       }
 
       // Update table with recent data
@@ -1222,6 +1446,7 @@
           const row = tbody.insertRow();
           const accuracy = data.accuracy ? data.accuracy.toFixed(2) : "--";
           row.innerHTML = `
+                    <td><strong>${data.device_id || "--"}</strong></td>
                     <td>${data.timestamp}</td>
                     <td>${data.latitude.toFixed(6)}</td>
                     <td>${data.longitude.toFixed(6)}</td>
@@ -1304,6 +1529,7 @@
 
       // Initialize
       initMap();
+      fetchDevices(); // Fetch available devices first
       fetchGPSData();
       fetchTrainStatus();
       fetchSessions();
@@ -1312,6 +1538,7 @@
       setInterval(fetchGPSData, 15000);
       setInterval(fetchTrainStatus, 5000); // Check train status every 5 seconds
       setInterval(fetchSessions, 10000); // Check sessions every 10 seconds
+      setInterval(fetchDevices, 10000); // Check devices every 10 seconds
 
       // ==== Session Management Functions ====
 
@@ -1713,7 +1940,7 @@
         if (gpsData.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="7" style="text-align: center; padding: 20px; color: #999;">
+              <td colspan="8" style="text-align: center; padding: 20px; color: #999;">
                 No GPS data available for this session.
               </td>
             </tr>
@@ -1729,6 +1956,9 @@
             <td style="padding: 12px; border-bottom: 1px solid #ddd;">${
               index + 1
             }</td>
+            <td style="padding: 12px; border-bottom: 1px solid #ddd;"><strong>${
+              point.device_id || "--"
+            }</strong></td>
             <td style="padding: 12px; border-bottom: 1px solid #ddd;">${
               point.timestamp
             }</td>

@@ -3,6 +3,11 @@
 #include <HTTPClient.h>  // HTTP client for API requests
 #include <ArduinoJson.h>  // JSON library for MongoDB data
 
+// ==== DEVICE CONFIGURATION ====
+// ⚠️ IMPORTANT: Change this for each ESP32 board to a unique ID
+// Examples: "ESP32_STATION_01", "ESP32_STATION_02", "ESP32_COLOMBO", "ESP32_GALLE"
+const char* DEVICE_ID = "ESP32_GPS_01";  // 🔧 CHANGE THIS FOR EACH DEVICE!
+
 // ==== Wi-Fi Credentials ====
 const char* ssid     = "Tyzon7";      
 const char* password = "11111111";
@@ -180,7 +185,7 @@ bool sendToMongoDB(double latitude, double longitude, int satellites, double hdo
   doc["hdop"] = hdop;
   doc["timestamp"] = timestamp;
   doc["accuracy"] = accuracy;  // Add accuracy field
-  doc["device_id"] = "ESP32_GPS_01";  // You can customize this
+  doc["device_id"] = DEVICE_ID;  // Use configured device ID
   
   // Serialize JSON
   String jsonString;
@@ -210,6 +215,12 @@ bool sendToMongoDB(double latitude, double longitude, int satellites, double hdo
 void setup() {
   Serial.begin(115200);
   delay(100);
+
+  // ==== Display Device ID ====
+  Serial.println("==================================");
+  Serial.print("🆔 DEVICE ID: ");
+  Serial.println(DEVICE_ID);
+  Serial.println("==================================");
 
   // ==== Initialize Power Indicator LED (Turn ON immediately) ====
   pinMode(POWER_LED_PIN, OUTPUT);
