@@ -26,11 +26,13 @@ MONGODB_URI = "mongodb+srv://oshen:oshen@cluster0.h2my8yk.mongodb.net/?retryWrit
 DATABASE_NAME = "gps_tracker"
 COLLECTION_NAME = "gpsdata"
 TRAIN_DETAILS_COLLECTION = "train_details"
+SESSIONS_COLLECTION = "sessions"
 
 client = None
 db = None
 collection = None
 train_collection = None
+sessions_collection = None
 
 try:
     client = MongoClient(MONGODB_URI)
@@ -39,6 +41,7 @@ try:
     db = client[DATABASE_NAME]
     collection = db[COLLECTION_NAME]
     train_collection = db[TRAIN_DETAILS_COLLECTION]
+    sessions_collection = db[SESSIONS_COLLECTION]
     
     # Initialize train details if not exists
     if train_collection.count_documents({}) == 0:
@@ -51,6 +54,7 @@ try:
     
     print("✅ Connected to MongoDB")
     print("✅ Train details collection initialized")
+    print("✅ Sessions collection initialized")
 except Exception as e:
     print(f"❌ MongoDB connection error: {e}")
     # Optional: Exit the application if MongoDB connection fails
@@ -100,6 +104,26 @@ class TrainDetailsResponse(BaseModel):
             datetime: lambda v: v.isoformat()
         }
 
+class SessionCreate(BaseModel):
+    start_point: str
+    end_point: str
+
+class Session(BaseModel):
+    id: Optional[str] = None
+    start_point: str
+    end_point: str
+    status: str  # "created", "active", "completed"
+    created_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    gps_count: int = 0
+
+    class Config:
+        json_encoders = {
+            ObjectId: str,
+            datetime: lambda v: v.isoformat()
+        }
+
 # ==== API Routes ====
 
 @app.get("/")
@@ -125,7 +149,7 @@ async def health_check():
 @app.post("/api/gps")
 async def receive_gps_data(gps_data: GPSData):
     """
-    Receive GPS data from ESP32 and store in MongoDB
+    Receive GPS data from ESP32 and store in session's gps_data array
     """
     try:
         # Validate required fields
@@ -135,28 +159,47 @@ async def receive_gps_data(gps_data: GPSData):
                 detail="Missing required fields: latitude and longitude"
             )
 
-        # Prepare document for MongoDB
-        document = {
+        # Check if there's an active session
+        active_session = sessions_collection.find_one({"status": "active"})
+        
+        if not active_session:
+            print(f"⚠️ No active session - GPS data not saved: {gps_data.latitude}, {gps_data.longitude}")
+            return {
+                "success": False,
+                "message": "No active session. GPS data not stored.",
+                "data": None
+            }
+
+        # Prepare GPS data document
+        gps_document = {
             "latitude": gps_data.latitude,
             "longitude": gps_data.longitude,
             "satellites": gps_data.satellites,
             "hdop": gps_data.hdop,
-            "accuracy": gps_data.accuracy,  # Store accuracy
+            "accuracy": gps_data.accuracy,
             "timestamp": gps_data.timestamp,
             "device_id": gps_data.device_id,
             "received_at": datetime.utcnow()
         }
 
+        # Push GPS data into session's gps_data array and increment count
+        sessions_collection.update_one(
+            {"_id": active_session["_id"]},
+            {
+                "$push": {"gps_data": gps_document},
+                "$inc": {"gps_count": 1}
+            }
+        )
         # Insert into MongoDB
-        result = collection.insert_one(document)
-        document["_id"] = str(result.inserted_id)
+        result = collection.insert_one(gps_document)
+        gps_document["_id"] = str(result.inserted_id)
 
-        print(f"📍 GPS Data saved: {gps_data.latitude}, {gps_data.longitude} from {gps_data.device_id}")
+        print(f"📍 GPS Data saved: {gps_data.latitude}, {gps_data.longitude} from {gps_data.device_id} (Session: {active_session['_id']})")
 
         return {
             "success": True,
             "message": "GPS data saved successfully",
-            "data": document
+            "data": gps_document
         }
 
     except HTTPException:
@@ -288,6 +331,218 @@ async def update_train_status(train_details: TrainDetails):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update train status: {str(e)}"
+        )
+
+# ==== Session Management API Routes ====
+
+@app.post("/api/sessions")
+async def create_session(session_data: SessionCreate):
+    """
+    Create a new GPS recording session
+    """
+    try:
+        session_doc = {
+            "start_point": session_data.start_point,
+            "end_point": session_data.end_point,
+            "status": "created",
+            "created_at": datetime.utcnow(),
+            "started_at": None,
+            "ended_at": None,
+            "gps_count": 0,
+            "gps_data": []
+        }
+        
+        result = sessions_collection.insert_one(session_doc)
+        session_doc["_id"] = str(result.inserted_id)
+        
+        print(f"📝 Session created: {session_data.start_point} → {session_data.end_point}")
+        
+        return {
+            "success": True,
+            "message": "Session created successfully",
+            "data": {
+                "id": str(result.inserted_id),
+                "start_point": session_doc["start_point"],
+                "end_point": session_doc["end_point"],
+                "status": session_doc["status"],
+                "created_at": session_doc["created_at"],
+                "gps_count": session_doc["gps_count"]
+            }
+        }
+    
+    except Exception as e:
+        print(f"Error creating session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create session: {str(e)}"
+        )
+
+@app.post("/api/sessions/{session_id}/start")
+async def start_session(session_id: str):
+    """
+    Start recording GPS data for a session
+    """
+    try:
+        # Check if session exists
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Stop any other active sessions
+        sessions_collection.update_many(
+            {"status": "active"},
+            {"$set": {"status": "completed", "ended_at": datetime.utcnow()}}
+        )
+        
+        # Start this session
+        sessions_collection.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {"status": "active", "started_at": datetime.utcnow()}}
+        )
+        
+        print(f"▶️ Session started: {session_id}")
+        
+        return {
+            "success": True,
+            "message": "Session started successfully",
+            "session_id": session_id
+        }
+    
+    except Exception as e:
+        print(f"Error starting session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start session: {str(e)}"
+        )
+
+@app.post("/api/sessions/{session_id}/stop")
+async def stop_session(session_id: str):
+    """
+    Stop recording GPS data for a session
+    """
+    try:
+        # Check if session exists
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Stop the session
+        sessions_collection.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {"status": "completed", "ended_at": datetime.utcnow()}}
+        )
+        
+        print(f"⏹️ Session stopped: {session_id}")
+        
+        return {
+            "success": True,
+            "message": "Session stopped successfully",
+            "session_id": session_id
+        }
+    
+    except Exception as e:
+        print(f"Error stopping session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stop session: {str(e)}"
+        )
+
+@app.get("/api/sessions")
+async def get_sessions():
+    """
+    Get all sessions
+    """
+    try:
+        cursor = sessions_collection.find().sort("created_at", -1)
+        sessions = []
+        
+        for doc in cursor:
+            sessions.append({
+                "id": str(doc["_id"]),
+                "start_point": doc["start_point"],
+                "end_point": doc["end_point"],
+                "status": doc["status"],
+                "created_at": doc["created_at"],
+                "started_at": doc.get("started_at"),
+                "ended_at": doc.get("ended_at"),
+                "gps_count": doc.get("gps_count", 0)
+            })
+        
+        return {
+            "success": True,
+            "count": len(sessions),
+            "data": sessions
+        }
+    
+    except Exception as e:
+        print(f"Error fetching sessions: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch sessions: {str(e)}"
+        )
+
+@app.delete("/api/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """
+    Delete a session (GPS data is embedded, so it's deleted automatically)
+    """
+    try:
+        # Check if session exists
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Get GPS count before deletion
+        gps_count = session.get("gps_count", 0)
+        
+        # Delete the session (embedded GPS data will be deleted automatically)
+        sessions_collection.delete_one({"_id": ObjectId(session_id)})
+        
+        print(f"🗑️ Session deleted: {session_id} ({gps_count} GPS records deleted)")
+        
+        return {
+            "success": True,
+            "message": f"Session deleted successfully ({gps_count} GPS records deleted)",
+            "session_id": session_id
+        }
+    
+    except Exception as e:
+        print(f"Error deleting session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete session: {str(e)}"
+        )
+
+@app.get("/api/sessions/{session_id}/gps")
+async def get_session_gps_data(session_id: str, limit: int = 1000):
+    """
+    Get all GPS data for a specific session from embedded array
+    """
+    try:
+        # Find the session
+        session = sessions_collection.find_one({"_id": ObjectId(session_id)})
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Get GPS data from the embedded array
+        gps_data = session.get("gps_data", [])
+        
+        # Apply limit
+        if len(gps_data) > limit:
+            gps_data = gps_data[:limit]
+        
+        return {
+            "success": True,
+            "count": len(gps_data),
+            "data": gps_data
+        }
+    
+    except Exception as e:
+        print(f"Error fetching session GPS data: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch session GPS data: {str(e)}"
         )
 
 if __name__ == "__main__":
