@@ -11,8 +11,10 @@ const char* password = "11111111";
 // For localhost testing (ESP32 and computer on same network):
 // const char* mongoAPIEndpoint = "http://127.0.0.1:8000/api/gps";  // ❌ This won't work from ESP32!
 // Replace YOUR_SERVER_IP with your computer's IP address (use 'ipconfig' on Windows)
+//https://railway-safety-research.onrender.com/api/gps
 // Example: "http://192.168.1.100:8000/api/gps"
-const char* mongoAPIEndpoint = "https://railway-safety-research.onrender.com/api/gps";  // Your computer's IP
+const char* mongoAPIEndpoint = "http://192.168.1.9:8000/api/gps";  // Your computer's IP
+const char* trainStatusEndpoint = "http://192.168.1.9:8000/api/train/status";  // Train status API
 // The FastAPI server now runs on port 8000  
 
 // ==== GPS ====
@@ -21,6 +23,16 @@ TinyGPSPlus gps;
 
 const int GPS_RX_PIN = 25; // GPS TX -> ESP RX
 const int GPS_TX_PIN = 26; // GPS RX -> ESP TX
+
+// ==== Buzzer and LED Pins ====
+const int BUZZER_PIN = 23;     // GPIO pin for buzzer
+const int LED_PIN = 22;        // GPIO pin for LED/lights
+const int POWER_LED_PIN = 21;  // GPIO pin for power indicator LED (always ON when powered)
+
+// Train status
+bool trainActive = false;
+unsigned long lastTrainStatusCheck = 0;
+const unsigned long TRAIN_STATUS_CHECK_INTERVAL = 5000UL;  // Check every 5 seconds
 
 // Print time interval
 const unsigned long PRINT_INTERVAL_MS = 15000UL;
@@ -46,6 +58,7 @@ struct KF1D {
 
 KF1D kfLat, kfLon;
 unsigned long lastKFMs = 0;
+unsigned long lastGPSUpdateMs = 0;  // Track when we last received GPS data
 
 // ==== Conversions ====
 static inline double metersToDegLat(double m)    { return m / 111320.0; }
@@ -61,9 +74,95 @@ static inline double degLonToMeters(double deg, double lat_deg) {
   return deg * 111320.0 * c;
 }
 
+// ==== Check Train Status from API ====
+bool checkTrainStatus() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("❌ WiFi not connected. Cannot check train status.");
+    Serial.println("💡 Attempting to reconnect to WiFi...");
+    WiFi.reconnect();
+    delay(2000);
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("❌ WiFi reconnection failed.");
+      return false;
+    }
+    Serial.println("✅ WiFi reconnected!");
+  }
+
+  HTTPClient http;
+  http.setTimeout(5000);  // Set 5 second timeout
+  http.begin(trainStatusEndpoint);
+  http.addHeader("Content-Type", "application/json");
+  
+  Serial.println("🔍 Checking train status...");
+  Serial.print("📡 Connecting to: ");
+  Serial.println(trainStatusEndpoint);
+  
+  // Send GET request
+  int httpResponseCode = http.GET();
+  
+  if (httpResponseCode == 200) {
+    String response = http.getString();
+    
+    // Parse JSON response
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (!error) {
+      bool active = doc["active"];
+      trainActive = active;
+      
+      Serial.print("🚂 Train Status: ");
+      Serial.println(active ? "ACTIVE ⚠️" : "INACTIVE");
+      
+      // Control buzzer and LED based on status
+      if (trainActive) {
+        digitalWrite(LED_PIN, HIGH);    // Turn on LED
+        digitalWrite(BUZZER_PIN, HIGH); // Turn on buzzer
+      } else {
+        digitalWrite(LED_PIN, LOW);     // Turn off LED
+        digitalWrite(BUZZER_PIN, LOW);  // Turn off buzzer
+      }
+      
+      http.end();
+      return true;
+    } else {
+      Serial.println("❌ Error parsing train status JSON");
+      http.end();
+      return false;
+    }
+  } else {
+    Serial.print("❌ Error checking train status. HTTP Code: ");
+    Serial.println(httpResponseCode);
+    
+    // Detailed error messages
+    if (httpResponseCode == -1) {
+      Serial.println("💡 CONNECTION FAILED - Possible causes:");
+      Serial.println("   1. Server not running on the specified IP");
+      Serial.println("   2. Wrong IP address in code");
+      Serial.println("   3. Firewall blocking the connection");
+      Serial.println("   4. ESP32 and computer on different networks");
+      Serial.print("   Current endpoint: ");
+      Serial.println(trainStatusEndpoint);
+      Serial.print("   WiFi Status: ");
+      Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+      Serial.print("   ESP32 IP: ");
+      Serial.println(WiFi.localIP());
+    } else if (httpResponseCode == -11) {
+      Serial.println("💡 TIMEOUT - Server took too long to respond");
+    } else if (httpResponseCode == 404) {
+      Serial.println("💡 NOT FOUND - API endpoint doesn't exist");
+    } else if (httpResponseCode == 500) {
+      Serial.println("💡 SERVER ERROR - Backend server has an error");
+    }
+    
+    http.end();
+    return false;
+  }
+}
+
 // ==== Send GPS Data to MongoDB ====
 bool sendToMongoDB(double latitude, double longitude, int satellites, double hdop, 
-                   const char* timestamp) {
+                   const char* timestamp, double accuracy) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("❌ WiFi not connected. Cannot send to MongoDB.");
     return false;
@@ -80,6 +179,7 @@ bool sendToMongoDB(double latitude, double longitude, int satellites, double hdo
   doc["satellites"] = satellites;
   doc["hdop"] = hdop;
   doc["timestamp"] = timestamp;
+  doc["accuracy"] = accuracy;  // Add accuracy field
   doc["device_id"] = "ESP32_GPS_01";  // You can customize this
   
   // Serialize JSON
@@ -111,6 +211,18 @@ void setup() {
   Serial.begin(115200);
   delay(100);
 
+  // ==== Initialize Power Indicator LED (Turn ON immediately) ====
+  pinMode(POWER_LED_PIN, OUTPUT);
+  digitalWrite(POWER_LED_PIN, HIGH);  // Power indicator ON - ESP32 is powered!
+  Serial.println("💡 Power indicator LED turned ON");
+
+  // ==== Initialize Buzzer and LED Pins ====
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);  // Start with buzzer off
+  digitalWrite(LED_PIN, LOW);     // Start with LED off
+  Serial.println("🔊 Buzzer and LED initialized");
+
   // ==== Connect to WiFi ====
   WiFi.begin(ssid, password);
   Serial.print("🔗 Connecting to WiFi");
@@ -125,6 +237,9 @@ void setup() {
   // ==== Start GPS ====
   GPSSerial.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.println("📡 ESP32 + NEO-M8N: Kalman filtering enabled (lat/lon)");
+  
+  // ==== Check initial train status ====
+  checkTrainStatus();
 }
 
 void loop() {
@@ -132,6 +247,12 @@ void loop() {
   while (GPSSerial.available()) gps.encode(GPSSerial.read());
 
   const unsigned long now = millis();
+
+  // ==== Check Train Status Periodically ====
+  if (now - lastTrainStatusCheck >= TRAIN_STATUS_CHECK_INTERVAL) {
+    lastTrainStatusCheck = now;
+    checkTrainStatus();
+  }
 
   // GPS Kalman update
   if (gps.location.isUpdated() &&
@@ -163,6 +284,9 @@ void loop() {
     kfLon.predict(Q_lon);
     kfLat.update(rawLat, R_lat);
     kfLon.update(rawLon, R_lon);
+    
+    // Mark that we received fresh GPS data
+    lastGPSUpdateMs = now;
   }
 
   // Print block
@@ -200,19 +324,66 @@ void loop() {
       Serial.println("✅ Good fix (Kalman-smoothed):");
       Serial.print("Longitude (KF): "); Serial.println(kLon, 7);
       Serial.print("Latitude  (KF): "); Serial.println(kLat, 7);
-
-      // ==== Send to MongoDB ====
-      char timestampStr[40] = "Unknown";
-      if (gps.date.isValid() && gps.time.isValid()) {
-        sprintf(timestampStr, "%04d-%02d-%02d %02d:%02d:%02d UTC",
-                gps.date.year(), gps.date.month(), gps.date.day(),
-                gps.time.hour(), gps.time.minute(), gps.time.second());
-      }
       
-      int sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
+      // ==== Calculate and Print Accuracy Metrics ====
+      // Get Kalman filter uncertainties (standard deviation)
+      double sigma_lat_deg = kfLat.sigma();  // in degrees
+      double sigma_lon_deg = kfLon.sigma();  // in degrees
+      
+      // Convert to meters for practical interpretation
+      double sigma_lat_m = degLatToMeters(sigma_lat_deg);
+      double sigma_lon_m = degLonToMeters(sigma_lon_deg, kLat);
+      
+      // Combined position accuracy (CEP - Circular Error Probable)
+      // This gives the radius within which 50% of positions fall
+      double cep_meters = 0.59 * (sigma_lat_m + sigma_lon_m);
+      
+      // 95% confidence radius (approximately 2-sigma)
+      double accuracy_95_meters = sqrt(sq(2.0 * sigma_lat_m) + sq(2.0 * sigma_lon_m));
+      
+      // Raw GPS accuracy estimate (based on HDOP)
       double hdopVal = gps.hdop.isValid() ? gps.hdop.hdop() : 0.0;
+      double raw_accuracy_m = max(1.5, 3.0 * hdopVal);
       
-      sendToMongoDB(kLat, kLon, sats, hdopVal, timestampStr);
+      Serial.println("\n📊 Accuracy After Kalman Filtering:");
+      Serial.print("  Lat Uncertainty: "); Serial.print(sigma_lat_m, 2); Serial.println(" m");
+      Serial.print("  Lon Uncertainty: "); Serial.print(sigma_lon_m, 2); Serial.println(" m");
+      Serial.print("  CEP (50% confidence): "); Serial.print(cep_meters, 2); Serial.println(" m");
+      Serial.print("  Accuracy (95% confidence): "); Serial.print(accuracy_95_meters, 2); Serial.println(" m");
+      Serial.print("  Raw GPS Accuracy: "); Serial.print(raw_accuracy_m, 2); Serial.println(" m");
+      
+      // Show improvement
+      double improvement_percent = ((raw_accuracy_m - accuracy_95_meters) / raw_accuracy_m) * 100.0;
+      if (improvement_percent > 0) {
+        Serial.print("  🎯 Improvement: "); Serial.print(improvement_percent, 1); Serial.println("% better");
+      }
+      Serial.println();
+
+      // ==== Check if GPS data is fresh (received within last 30 seconds) ====
+      const unsigned long GPS_TIMEOUT_MS = 30000UL;  // 30 seconds
+      unsigned long timeSinceLastGPS = now - lastGPSUpdateMs;
+      
+      if (lastGPSUpdateMs > 0 && timeSinceLastGPS < GPS_TIMEOUT_MS) {
+        // GPS data is fresh - send to MongoDB
+        char timestampStr[40] = "Unknown";
+        if (gps.date.isValid() && gps.time.isValid()) {
+          sprintf(timestampStr, "%04d-%02d-%02d %02d:%02d:%02d UTC",
+                  gps.date.year(), gps.date.month(), gps.date.day(),
+                  gps.time.hour(), gps.time.minute(), gps.time.second());
+        }
+        
+        int sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
+        double hdopVal = gps.hdop.isValid() ? gps.hdop.hdop() : 0.0;
+        
+        // Send with accuracy (95% confidence radius)
+        sendToMongoDB(kLat, kLon, sats, hdopVal, timestampStr, accuracy_95_meters);
+      } else {
+        // GPS data is stale or GPS is disconnected
+        Serial.println("⚠️ GPS data is stale or GPS disconnected. Not sending to MongoDB.");
+        Serial.print("Time since last GPS update: ");
+        Serial.print(timeSinceLastGPS / 1000.0);
+        Serial.println(" seconds");
+      }
       
     } else {
       Serial.println("Waiting for stable, high-quality fixes.");
