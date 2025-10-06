@@ -8,6 +8,57 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
+    <!-- SweetAlert2 for beautiful notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      /* Custom SweetAlert2 styling */
+      .swal2-popup {
+        border-radius: 15px !important;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
+      }
+
+      .swal2-title {
+        font-size: 24px !important;
+        font-weight: 600 !important;
+        color: #333 !important;
+      }
+
+      .swal2-content {
+        font-size: 16px !important;
+        color: #666 !important;
+        line-height: 1.5 !important;
+      }
+
+      .swal2-confirm {
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        padding: 12px 24px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.3s ease !important;
+      }
+
+      .swal2-confirm:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+      }
+
+      .swal2-success {
+        border-color: #4caf50 !important;
+      }
+
+      .swal2-error {
+        border-color: #f44336 !important;
+      }
+
+      .swal2-warning {
+        border-color: #ff9800 !important;
+      }
+
+      .swal2-timer-progress-bar {
+        background: linear-gradient(90deg, #4caf50, #8bc34a) !important;
+      }
+    </style>
     <style>
       * {
         margin: 0;
@@ -741,10 +792,116 @@
         }
       }
 
+      /* Collision Warning Styles */
+      .collision-warning {
+        background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+        border: 4px solid #ffffff;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+        animation: pulseWarning 1.5s infinite;
+        margin-bottom: 15px;
+      }
+
+      @keyframes pulseWarning {
+        0%,
+        100% {
+          box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 50px rgba(255, 0, 0, 0.9);
+          transform: scale(1.02);
+        }
+      }
+
+      .collision-light {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 15px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #ff0000, #8b0000);
+        animation: blinkRed 0.5s infinite;
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+      }
+
+      @keyframes blinkRed {
+        0%,
+        49% {
+          background: radial-gradient(circle, #ff0000, #8b0000);
+          box-shadow: 0 0 40px rgba(255, 0, 0, 1);
+        }
+        50%,
+        100% {
+          background: radial-gradient(circle, #8b0000, #4b0000);
+          box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+      }
+
+      .collision-title {
+        color: white;
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .collision-message {
+        color: white;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      .collision-details {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+        color: white;
+      }
+
+      .collision-safe {
+        background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+        border: 3px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+      }
+
+      .safe-light {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 12px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #4caf50, #2e7d32);
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+      }
+
       /* Small mobile breakpoint */
       @media (max-width: 480px) {
         body {
           padding: 8px;
+        }
+
+        .collision-light {
+          width: 60px;
+          height: 60px;
+          font-size: 2rem;
+        }
+
+        .collision-title {
+          font-size: 1.4rem;
         }
 
         h1 {
@@ -834,10 +991,127 @@
         }
       }
     </style>
+    <!-- Sri Lanka Railways Theme Overrides -->
+    <style id="slr-theme">
+      :root {
+        --slr-primary: #0a3d62; /* deep navy */
+        --slr-secondary: #0e6ba8; /* railway blue */
+        --slr-accent: #ff6a00; /* saffron/orange */
+        --slr-surface: #ffffff;
+      }
+
+      body {
+        background: linear-gradient(
+          135deg,
+          var(--slr-primary) 0%,
+          var(--slr-secondary) 100%
+        );
+      }
+
+      h1 {
+        letter-spacing: 0.5px;
+      }
+
+      .card h2 {
+        color: var(--slr-secondary);
+        border-bottom: 3px solid var(--slr-secondary);
+      }
+
+      .stat-box {
+        background: linear-gradient(
+          135deg,
+          var(--slr-secondary) 0%,
+          var(--slr-accent) 100%
+        );
+      }
+
+      .refresh-btn,
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          var(--slr-secondary) 0%,
+          var(--slr-accent) 100%
+        );
+      }
+
+      #dataTable th {
+        background: var(--slr-secondary);
+      }
+
+      .modal-header {
+        color: var(--slr-secondary);
+      }
+
+      .tabs-header {
+        background: #ffffff;
+        backdrop-filter: blur(6px);
+        border-radius: 10px;
+        padding: 6px;
+      }
+
+      /* Ensure tab labels are visible on light header */
+      .tabs-header .tab-button {
+        color: var(--slr-primary) !important;
+      }
+
+      .tabs-header .tab-button:hover {
+        color: var(--slr-accent) !important;
+        background: rgba(0, 0, 0, 0.04);
+      }
+
+      .tabs-header .tab-button.active {
+        background: linear-gradient(
+          135deg,
+          var(--slr-secondary) 0%,
+          var(--slr-accent) 100%
+        );
+        color: #ffffff !important;
+        border-bottom-color: transparent;
+      }
+
+      /* Top brand bar */
+      .slr-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--slr-primary);
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 6px auto 12px auto;
+        max-width: 1400px;
+      }
+
+      .slr-topbar .brand {
+        font-weight: 700;
+        font-size: 1rem;
+      }
+
+      .slr-topbar .tag {
+        font-size: 0.85rem;
+        opacity: 0.9;
+      }
+    </style>
   </head>
   <body>
+    <!-- Audio element for collision warning sound -->
+    <audio id="collisionSound" preload="auto">
+      <source
+        src="https://assets.mixkit.co/active_storage/sfx/2803/2803.wav"
+        type="audio/wav"
+      />
+      <source
+        src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
+        type="audio/mpeg"
+      />
+    </audio>
+
+    <div class="slr-topbar">
+      <div class="brand">🚆 Sri Lanka Railways</div>
+      <div class="tag">National Railway Safety Control Center</div>
+    </div>
     <div class="container">
-      <h1>📡 Railway Safety System</h1>
+      <h1>📡 Sri Lanka Railways — Safety Control Center</h1>
 
       <!-- Tabs Container -->
       <div class="tabs-container">
@@ -848,10 +1122,21 @@
           <button class="tab-button" onclick="switchTab('sessions')">
             <span class="tab-icon">🗂️</span> Coordinate Sessions
           </button>
+          <button class="tab-button" onclick="switchTab('tracks')">
+            <span class="tab-icon">🛤️</span> Track Data
+          </button>
+          <button class="tab-button" onclick="switchTab('simulation')">
+            <span class="tab-icon">🎮</span> Simulation
+          </button>
         </div>
 
         <!-- Dashboard Tab -->
         <div id="dashboardTab" class="tab-content active">
+          <!-- Collision Warning Panel -->
+          <div id="collisionWarningPanel" style="display: none">
+            <!-- Will be populated by JavaScript -->
+          </div>
+
           <div class="dashboard">
             <div class="card">
               <h2>📍 Live Location</h2>
@@ -860,6 +1145,32 @@
 
             <div class="card">
               <h2>📊 Statistics</h2>
+
+              <!-- Sound Test Button -->
+              <div style="margin-bottom: 15px; text-align: center">
+                <button
+                  onclick="testCollisionSound()"
+                  style="
+                    background: linear-gradient(
+                      135deg,
+                      #ff6a00 0%,
+                      #ff8c00 100%
+                    );
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    transition: transform 0.2s;
+                  "
+                  onmouseover="this.style.transform='translateY(-2px)'"
+                  onmouseout="this.style.transform='translateY(0)'"
+                >
+                  🔊 Test Collision Sound
+                </button>
+              </div>
 
               <!-- Device Filter -->
               <div
@@ -1053,6 +1364,773 @@
           </div>
         </div>
         <!-- End Coordinate Sessions Tab -->
+
+        <!-- Track Data Tab -->
+        <div id="tracksTab" class="tab-content">
+          <div class="card" style="margin-bottom: 0">
+            <h2>🛤️ Track Data Management</h2>
+            <p style="color: #666; margin-bottom: 20px">
+              Upload and manage actual track GPS data (CSV files with lat, lon
+              columns). The active track is used for collision detection.
+            </p>
+
+            <!-- Upload Form -->
+            <div
+              style="
+                background: #f5f5f5;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 25px;
+              "
+            >
+              <h3 style="color: #667eea; margin-bottom: 15px">
+                📤 Upload New Track Data
+              </h3>
+              <form id="trackUploadForm" onsubmit="uploadTrackData(event)">
+                <div class="form-group">
+                  <label for="trackName">Track Name *</label>
+                  <input
+                    type="text"
+                    id="trackName"
+                    placeholder="e.g., Panadura - Kalutara Section"
+                    required
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="startStation">Start Station</label>
+                  <input
+                    type="text"
+                    id="startStation"
+                    placeholder="e.g., Panadura"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="endStation">End Station</label>
+                  <input
+                    type="text"
+                    id="endStation"
+                    placeholder="e.g., Kalutara"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="trackFile"
+                    >CSV File * (with lat, lon columns)</label
+                  >
+                  <input
+                    type="file"
+                    id="trackFile"
+                    accept=".csv"
+                    required
+                    style="
+                      width: 100%;
+                      padding: 10px;
+                      border: 2px dashed #667eea;
+                      border-radius: 8px;
+                      background: white;
+                      cursor: pointer;
+                    "
+                  />
+                  <small style="color: #666; display: block; margin-top: 5px">
+                    CSV format: First row should have headers 'lat' and 'lon'
+                  </small>
+                </div>
+
+                <button type="submit" class="btn-primary" id="uploadBtn">
+                  📤 Upload Track Data
+                </button>
+              </form>
+            </div>
+
+            <!-- Track List -->
+            <h3 style="color: #667eea; margin-bottom: 15px">
+              📋 Uploaded Track Data
+            </h3>
+            <div id="tracksList" style="margin-top: 15px">
+              <p style="text-align: center; color: #999">Loading tracks...</p>
+            </div>
+          </div>
+        </div>
+        <!-- End Track Data Tab -->
+
+        <!-- Simulation Tab -->
+        <div id="simulationTab" class="tab-content">
+          <div class="card" style="margin-bottom: 0">
+            <h2>🎮 Railway Collision Detection Simulation</h2>
+            <p style="color: #666; margin-bottom: 20px">
+              Simulate trains on parallel tracks between Kaluthara and Panadura.
+              Test collision detection when multiple trains enter the same
+              track.
+            </p>
+
+            <!-- Simulation Control Panel -->
+            <div
+              style="
+                background: #f5f5f5;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 25px;
+              "
+            >
+              <h3 style="color: #667eea; margin-bottom: 15px">
+                🎛️ Simulation Controls
+              </h3>
+
+              <!-- Reset Button -->
+              <button
+                class="btn-primary"
+                onclick="resetSimulation()"
+                style="margin-bottom: 20px; max-width: 200px"
+              >
+                🔄 Reset Simulation
+              </button>
+
+              <!-- Train Controls Grid -->
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                  gap: 20px;
+                  margin-top: 20px;
+                "
+              >
+                <!-- Train 1 Controls -->
+                <div
+                  style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    border: 3px solid #4caf50;
+                  "
+                >
+                  <h4 style="color: #4caf50; margin-bottom: 15px">
+                    🚂 Train 1 (Green)
+                  </h4>
+
+                  <div class="form-group">
+                    <label>Starting Station:</label>
+                    <select
+                      id="train1Station"
+                      style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #ddd;
+                        border-radius: 6px;
+                      "
+                      onchange="updateTrainPosition('train1')"
+                    >
+                      <option value="kaluthara">Kaluthara (North)</option>
+                      <option value="panadura">Panadura (South)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Track Selection:</label>
+                    <select
+                      id="train1Track"
+                      style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #ddd;
+                        border-radius: 6px;
+                      "
+                      onchange="updateTrainPosition('train1')"
+                    >
+                      <option value="track1">Track 1 (Up Line)</option>
+                      <option value="track2">Track 2 (Down Line)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label
+                      >Position: <span id="train1PositionLabel">0%</span></label
+                    >
+                    <input
+                      type="range"
+                      id="train1Position"
+                      min="0"
+                      max="100"
+                      value="0"
+                      style="width: 100%"
+                      oninput="updateTrainPosition('train1')"
+                    />
+                  </div>
+
+                  <button
+                    class="btn-primary"
+                    onclick="startTrainSimulation('train1')"
+                    id="train1StartBtn"
+                    style="
+                      background: linear-gradient(
+                        135deg,
+                        #4caf50 0%,
+                        #45a049 100%
+                      );
+                    "
+                  >
+                    ▶️ Start Train 1
+                  </button>
+                  <button
+                    class="btn-primary"
+                    onclick="stopTrainSimulation('train1')"
+                    id="train1StopBtn"
+                    style="background: #f44336; display: none"
+                  >
+                    ⏹️ Stop Train 1
+                  </button>
+                </div>
+
+                <!-- Train 2 Controls -->
+                <div
+                  style="
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    border: 3px solid #2196f3;
+                  "
+                >
+                  <h4 style="color: #2196f3; margin-bottom: 15px">
+                    🚂 Train 2 (Blue)
+                  </h4>
+
+                  <div class="form-group">
+                    <label>Starting Station:</label>
+                    <select
+                      id="train2Station"
+                      style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #ddd;
+                        border-radius: 6px;
+                      "
+                      onchange="updateTrainPosition('train2')"
+                    >
+                      <option value="kaluthara">Kaluthara (North)</option>
+                      <option value="panadura" selected>
+                        Panadura (South)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Track Selection:</label>
+                    <select
+                      id="train2Track"
+                      style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 2px solid #ddd;
+                        border-radius: 6px;
+                      "
+                      onchange="updateTrainPosition('train2')"
+                    >
+                      <option value="track1">Track 1 (Up Line)</option>
+                      <option value="track2">Track 2 (Down Line)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label
+                      >Position: <span id="train2PositionLabel">0%</span></label
+                    >
+                    <input
+                      type="range"
+                      id="train2Position"
+                      min="0"
+                      max="100"
+                      value="0"
+                      style="width: 100%"
+                      oninput="updateTrainPosition('train2')"
+                    />
+                  </div>
+
+                  <button
+                    class="btn-primary"
+                    onclick="startTrainSimulation('train2')"
+                    id="train2StartBtn"
+                  >
+                    ▶️ Start Train 2
+                  </button>
+                  <button
+                    class="btn-primary"
+                    onclick="stopTrainSimulation('train2')"
+                    id="train2StopBtn"
+                    style="background: #f44336; display: none"
+                  >
+                    ⏹️ Stop Train 2
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulation Visualization -->
+            <div
+              style="
+                background: #f9f9f9;
+                padding: 30px;
+                border-radius: 10px;
+                margin-bottom: 25px;
+              "
+            >
+              <h3
+                style="color: #667eea; margin-bottom: 20px; text-align: center"
+              >
+                🛤️ Track Visualization: Kaluthara ↔️ Panadura
+              </h3>
+
+              <!-- Collision Alert -->
+              <div id="simulationCollisionAlert" style="display: none">
+                <div class="collision-warning" style="margin-bottom: 20px">
+                  <div class="collision-light">🚨</div>
+                  <div class="collision-title">⚠️ COLLISION DETECTED ⚠️</div>
+                  <div class="collision-message">
+                    Both trains are on the same track!
+                  </div>
+                  <div class="collision-details">
+                    <div style="font-size: 1.1rem; margin-bottom: 10px">
+                      <strong>🚂 Trains:</strong> Train 1 & Train 2<br />
+                      <strong>🛤️ Track:</strong>
+                      <span id="collisionTrackName">Track 1</span>
+                    </div>
+                    <div
+                      style="
+                        margin-top: 10px;
+                        font-size: 1rem;
+                        background: rgba(255, 255, 255, 0.3);
+                        padding: 12px;
+                        border-radius: 5px;
+                        font-weight: bold;
+                      "
+                    >
+                      🛑 TRAINS STOPPED FOR SAFETY
+                    </div>
+                    <div
+                      style="
+                        margin-top: 10px;
+                        font-size: 0.9rem;
+                        background: rgba(0, 0, 0, 0.2);
+                        padding: 10px;
+                        border-radius: 5px;
+                      "
+                    >
+                      ⚠️ BUZZER SYSTEM ACTIVATED ⚠️
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Collision Safe Message -->
+              <div id="simulationSafeAlert" style="display: none">
+                <div class="collision-safe" style="margin-bottom: 20px">
+                  <div class="safe-light">✅</div>
+                  <div style="font-size: 1.3rem; font-weight: bold">
+                    All Clear - Safe Operation
+                  </div>
+                  <div style="font-size: 1rem; margin-top: 8px">
+                    Trains are on different tracks or separated
+                  </div>
+                </div>
+              </div>
+
+              <!-- Track Canvas -->
+              <div
+                style="
+                  position: relative;
+                  background: white;
+                  padding: 40px 20px;
+                  border-radius: 10px;
+                  min-height: 400px;
+                  overflow: hidden;
+                "
+              >
+                <!-- Station Labels -->
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 20px;
+                    padding: 0 20px;
+                  "
+                >
+                  <div style="text-align: left">
+                    <div
+                      style="
+                        font-weight: bold;
+                        font-size: 1.2rem;
+                        color: #667eea;
+                      "
+                    >
+                      🏛️ Kaluthara
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666">
+                      North Station
+                    </div>
+                  </div>
+                  <div style="text-align: center; color: #999">
+                    <div style="font-size: 0.9rem">← Railway Line →</div>
+                    <div style="font-size: 0.8rem">~15 km</div>
+                  </div>
+                  <div style="text-align: right">
+                    <div
+                      style="
+                        font-weight: bold;
+                        font-size: 1.2rem;
+                        color: #667eea;
+                      "
+                    >
+                      🏛️ Panadura
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666">
+                      South Station
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Track 1 (Up Line) -->
+                <div style="position: relative; margin-bottom: 60px">
+                  <div
+                    style="
+                      font-weight: 600;
+                      color: #666;
+                      margin-bottom: 10px;
+                      padding-left: 20px;
+                    "
+                  >
+                    Track 1 - Up Line (Kaluthara → Panadura)
+                  </div>
+                  <div
+                    style="
+                      position: relative;
+                      height: 40px;
+                      background: linear-gradient(
+                        to right,
+                        #e0e0e0,
+                        #bdbdbd,
+                        #e0e0e0
+                      );
+                      border-radius: 5px;
+                      border: 2px solid #999;
+                    "
+                  >
+                    <!-- Track lines -->
+                    <div
+                      style="
+                        position: absolute;
+                        top: 30%;
+                        width: 100%;
+                        height: 3px;
+                        background: #555;
+                      "
+                    ></div>
+                    <div
+                      style="
+                        position: absolute;
+                        top: 60%;
+                        width: 100%;
+                        height: 3px;
+                        background: #555;
+                      "
+                    ></div>
+                    <!-- Railway ties -->
+                    <div
+                      style="
+                        position: absolute;
+                        top: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 18px,
+                          #666 18px,
+                          #666 22px
+                        );
+                        opacity: 0.5;
+                      "
+                    ></div>
+
+                    <!-- Train 1 on Track 1 -->
+                    <div
+                      id="train1_track1"
+                      class="simulation-train"
+                      style="
+                        display: none;
+                        position: absolute;
+                        left: 0%;
+                        top: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 50px;
+                        background: #4caf50;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                        transition: left 0.5s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          text-align: center;
+                          color: white;
+                          font-weight: bold;
+                          line-height: 50px;
+                          font-size: 1.5rem;
+                        "
+                      >
+                        🚂
+                      </div>
+                    </div>
+
+                    <!-- Train 2 on Track 1 -->
+                    <div
+                      id="train2_track1"
+                      class="simulation-train"
+                      style="
+                        display: none;
+                        position: absolute;
+                        left: 0%;
+                        top: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 50px;
+                        background: #2196f3;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                        transition: left 0.5s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          text-align: center;
+                          color: white;
+                          font-weight: bold;
+                          line-height: 50px;
+                          font-size: 1.5rem;
+                        "
+                      >
+                        🚂
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Track 2 (Down Line) -->
+                <div style="position: relative">
+                  <div
+                    style="
+                      font-weight: 600;
+                      color: #666;
+                      margin-bottom: 10px;
+                      padding-left: 20px;
+                    "
+                  >
+                    Track 2 - Down Line (Panadura → Kaluthara)
+                  </div>
+                  <div
+                    style="
+                      position: relative;
+                      height: 40px;
+                      background: linear-gradient(
+                        to right,
+                        #e0e0e0,
+                        #bdbdbd,
+                        #e0e0e0
+                      );
+                      border-radius: 5px;
+                      border: 2px solid #999;
+                    "
+                  >
+                    <!-- Track lines -->
+                    <div
+                      style="
+                        position: absolute;
+                        top: 30%;
+                        width: 100%;
+                        height: 3px;
+                        background: #555;
+                      "
+                    ></div>
+                    <div
+                      style="
+                        position: absolute;
+                        top: 60%;
+                        width: 100%;
+                        height: 3px;
+                        background: #555;
+                      "
+                    ></div>
+                    <!-- Railway ties -->
+                    <div
+                      style="
+                        position: absolute;
+                        top: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 18px,
+                          #666 18px,
+                          #666 22px
+                        );
+                        opacity: 0.5;
+                      "
+                    ></div>
+
+                    <!-- Train 1 on Track 2 -->
+                    <div
+                      id="train1_track2"
+                      class="simulation-train"
+                      style="
+                        display: none;
+                        position: absolute;
+                        left: 0%;
+                        top: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 50px;
+                        background: #4caf50;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                        transition: left 0.5s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          text-align: center;
+                          color: white;
+                          font-weight: bold;
+                          line-height: 50px;
+                          font-size: 1.5rem;
+                        "
+                      >
+                        🚂
+                      </div>
+                    </div>
+
+                    <!-- Train 2 on Track 2 -->
+                    <div
+                      id="train2_track2"
+                      class="simulation-train"
+                      style="
+                        display: none;
+                        position: absolute;
+                        left: 0%;
+                        top: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 50px;
+                        background: #2196f3;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                        transition: left 0.5s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          text-align: center;
+                          color: white;
+                          font-weight: bold;
+                          line-height: 50px;
+                          font-size: 1.5rem;
+                        "
+                      >
+                        🚂
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Simulation Status -->
+            <div
+              style="
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                border: 2px solid #667eea;
+              "
+            >
+              <h3 style="color: #667eea; margin-bottom: 15px">
+                📊 Simulation Status
+              </h3>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 15px;
+                "
+              >
+                <div class="route-info-box">
+                  <div class="label">Train 1 Status</div>
+                  <div class="value" id="simTrain1Status">Ready</div>
+                </div>
+                <div class="route-info-box">
+                  <div class="label">Train 2 Status</div>
+                  <div class="value" id="simTrain2Status">Ready</div>
+                </div>
+                <div class="route-info-box">
+                  <div class="label">Train 1 Track</div>
+                  <div class="value" id="simTrain1Track">-</div>
+                </div>
+                <div class="route-info-box">
+                  <div class="label">Train 2 Track</div>
+                  <div class="value" id="simTrain2Track">-</div>
+                </div>
+                <div class="route-info-box" style="background: #f44336">
+                  <div class="label">Collision Risk</div>
+                  <div class="value" id="simCollisionRisk">None</div>
+                </div>
+                <div class="route-info-box" style="background: #ff9800">
+                  <div class="label">Frontend Buzzer</div>
+                  <div class="value" id="simBuzzerStatus">OFF</div>
+                </div>
+                <div class="route-info-box" style="background: #9c27b0">
+                  <div class="label">Backend Buzzer (TRAIN_01)</div>
+                  <div class="value" id="simBackendBuzzer1">OFF</div>
+                </div>
+                <div class="route-info-box" style="background: #9c27b0">
+                  <div class="label">Backend Buzzer (TRAIN_02)</div>
+                  <div class="value" id="simBackendBuzzer2">OFF</div>
+                </div>
+              </div>
+
+              <!-- Backend Connection Info -->
+              <div
+                style="
+                  margin-top: 20px;
+                  padding: 15px;
+                  background: #f5f5f5;
+                  border-radius: 8px;
+                  border-left: 4px solid #667eea;
+                "
+              >
+                <div
+                  style="font-weight: 600; color: #667eea; margin-bottom: 8px"
+                >
+                  🔗 Backend Integration Status
+                </div>
+                <div style="font-size: 0.9rem; color: #666">
+                  <div>
+                    • Train 1: <strong>TRAIN_01</strong> (Device: ESP32_GPS_01)
+                  </div>
+                  <div>
+                    • Train 2: <strong>TRAIN_02</strong> (Device: ESP32_GPS_02)
+                  </div>
+                  <div
+                    style="margin-top: 8px; color: #4caf50"
+                    id="backendStatusMsg"
+                  >
+                    ✓ Connected to backend system
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End Simulation Tab -->
       </div>
       <!-- End Tabs Container -->
     </div>
@@ -1179,6 +2257,50 @@
       </div>
     </div>
 
+    <!-- Track Route View Modal -->
+    <div id="trackRouteModal" class="session-view-modal">
+      <div class="session-view-content">
+        <span class="close" onclick="closeTrackRouteModal()">&times;</span>
+        <div class="modal-header" id="trackRouteTitle">🛤️ Track Route</div>
+
+        <div class="route-info" id="trackRouteInfo">
+          <div class="route-info-box">
+            <div class="label">Track Name</div>
+            <div class="value" id="viewTrackName">--</div>
+          </div>
+          <div class="route-info-box">
+            <div class="label">Track ID</div>
+            <div class="value" id="viewTrackId">--</div>
+          </div>
+          <div class="route-info-box">
+            <div class="label">Route</div>
+            <div class="value" id="viewTrackRoute">--</div>
+          </div>
+          <div class="route-info-box">
+            <div class="label">GPS Points</div>
+            <div class="value" id="viewTrackPoints">--</div>
+          </div>
+          <div class="route-info-box">
+            <div class="label">Filename</div>
+            <div class="value" id="viewTrackFilename">--</div>
+          </div>
+          <div class="route-info-box">
+            <div class="label">Uploaded</div>
+            <div class="value" id="viewTrackUploaded">--</div>
+          </div>
+        </div>
+
+        <h3 style="color: #667eea; margin-top: 20px">🗺️ Track Route Map</h3>
+        <div id="trackRouteMap" class="session-map"></div>
+
+        <div class="session-view-footer">
+          <button class="btn-secondary" onclick="closeTrackRouteModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       // Use relative URL so it works both locally and on Render
@@ -1186,6 +2308,13 @@
       const TRAIN_API_URL = window.location.origin + "/api/train/status";
       const SESSIONS_API_URL = window.location.origin + "/api/sessions";
       const DEVICES_API_URL = window.location.origin + "/api/devices";
+      const TRACKS_API_URL = window.location.origin + "/api/tracks";
+
+      // Collision detection variables
+      let collisionDetected = false;
+      let alarmSound = null;
+      let collisionCheckInterval = null;
+
       let map;
       let sessionMap = null;
       let sessionPolyline = null;
@@ -1193,6 +2322,9 @@
       let deviceMarkers = {}; // Store markers for each device
       let currentDeviceFilter = "all"; // Current selected device filter
       let allDevices = []; // Store all devices
+      let trackRouteMap = null; // Map for track route viewing
+      let trackRoutePolyline = null; // Polyline for track route
+      let trackRouteMarkers = []; // Markers for track route
 
       // Initialize map
       function initMap() {
@@ -1460,10 +2592,11 @@
       // Fetch train status from backend
       async function fetchTrainStatus() {
         try {
-          const response = await fetch(TRAIN_API_URL);
+          // Fetch TRAIN_01 status specifically
+          const response = await fetch(TRAIN_API_URL + "?train_id=TRAIN_01");
           const result = await response.json();
 
-          if (result.success) {
+          if (result.success && result.train_id === "TRAIN_01") {
             updateTrainStatusUI(result.active);
             document.getElementById("trainLastUpdate").textContent = new Date(
               result.updated_at
@@ -1517,13 +2650,25 @@
           } else {
             // Revert toggle if failed
             toggle.checked = !isActive;
-            alert("Failed to update train status");
+            Swal.fire({
+              icon: "error",
+              title: "Update Failed",
+              text: "Failed to update train status. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
           }
         } catch (error) {
           console.error("Error updating train status:", error);
           // Revert toggle if failed
           toggle.checked = !isActive;
-          alert("Error updating train status");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to update train status. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
@@ -1591,11 +2736,23 @@
             );
             fetchSessions();
           } else {
-            alert("Failed to create session");
+            Swal.fire({
+              icon: "error",
+              title: "Session Creation Failed",
+              text: "Failed to create session. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
           }
         } catch (error) {
           console.error("Error creating session:", error);
-          alert("Error creating session");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to create session. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
@@ -1682,7 +2839,19 @@
 
       // Start a session
       async function startSession(sessionId) {
-        if (!confirm("Start this session? GPS data will begin recording.")) {
+        const result = await Swal.fire({
+          title: "Start Session?",
+          text: "GPS data will begin recording for this session.",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Start Recording",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#4caf50",
+          cancelButtonColor: "#6c757d",
+          reverseButtons: true,
+        });
+
+        if (!result.isConfirmed) {
           return;
         }
 
@@ -1703,17 +2872,41 @@
             );
             fetchSessions();
           } else {
-            alert("Failed to start session");
+            Swal.fire({
+              icon: "error",
+              title: "Session Start Failed",
+              text: "Failed to start session. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
           }
         } catch (error) {
           console.error("Error starting session:", error);
-          alert("Error starting session");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to start session. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
       // Stop a session
       async function stopSession(sessionId) {
-        if (!confirm("Stop this session? GPS recording will end.")) {
+        const result = await Swal.fire({
+          title: "Stop Session?",
+          text: "GPS recording will end for this session.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Stop Recording",
+          cancelButtonText: "Continue Recording",
+          confirmButtonColor: "#ff9800",
+          cancelButtonColor: "#4caf50",
+          reverseButtons: true,
+        });
+
+        if (!result.isConfirmed) {
           return;
         }
 
@@ -1734,21 +2927,51 @@
             );
             fetchSessions();
           } else {
-            alert("Failed to stop session");
+            Swal.fire({
+              icon: "error",
+              title: "Session Stop Failed",
+              text: "Failed to stop session. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
           }
         } catch (error) {
           console.error("Error stopping session:", error);
-          alert("Error stopping session");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to stop session. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
       // Delete a session
       async function deleteSession(sessionId) {
-        if (
-          !confirm(
-            "Are you sure you want to delete this session? This will also delete all GPS data for this session. This action cannot be undone."
-          )
-        ) {
+        const result = await Swal.fire({
+          title: "Delete Session?",
+          html: `
+            <div style="text-align: left; margin: 20px 0;">
+              <p><strong>⚠️ Warning:</strong> This action cannot be undone!</p>
+              <p>This will permanently delete:</p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>The session record</li>
+                <li>All GPS data for this session</li>
+                <li>All associated route information</li>
+              </ul>
+            </div>
+          `,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Yes, Delete Permanently",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#f44336",
+          cancelButtonColor: "#6c757d",
+          reverseButtons: true,
+        });
+
+        if (!result.isConfirmed) {
           return;
         }
 
@@ -1766,11 +2989,23 @@
             );
             fetchSessions();
           } else {
-            alert("Failed to delete session");
+            Swal.fire({
+              icon: "error",
+              title: "Session Deletion Failed",
+              text: "Failed to delete session. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
           }
         } catch (error) {
           console.error("Error deleting session:", error);
-          alert("Error deleting session");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to delete session. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
@@ -1784,13 +3019,25 @@
           const sessionResult = await sessionResponse.json();
 
           if (!sessionResult.success) {
-            alert("Failed to fetch session details");
+            Swal.fire({
+              icon: "error",
+              title: "Data Error",
+              text: "Failed to fetch session details. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
             return;
           }
 
           const session = sessionResult.data.find((s) => s.id === sessionId);
           if (!session) {
-            alert("Session not found");
+            Swal.fire({
+              icon: "error",
+              title: "Session Not Found",
+              text: "The requested session could not be found.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
             return;
           }
 
@@ -1801,7 +3048,13 @@
           const gpsResult = await gpsResponse.json();
 
           if (!gpsResult.success) {
-            alert("Failed to fetch GPS data");
+            Swal.fire({
+              icon: "error",
+              title: "Data Error",
+              text: "Failed to fetch GPS data for this session.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
             return;
           }
 
@@ -1809,7 +3062,13 @@
           displaySessionView(session, gpsResult.data);
         } catch (error) {
           console.error("Error viewing session:", error);
-          alert("Error loading session data");
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to load session data. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
         }
       }
 
@@ -2039,11 +3298,163 @@
         document.getElementById("sessionViewModal").style.display = "none";
       }
 
+      // ==== Track Route View Functions ====
+
+      // View track route
+      async function viewTrackRoute(trackId, trackName) {
+        try {
+          // Fetch track coordinates
+          const response = await fetch(
+            `${TRACKS_API_URL}/${trackId}/coordinates`
+          );
+          const result = await response.json();
+
+          if (!result.success) {
+            Swal.fire({
+              icon: "error",
+              title: "Data Error",
+              text: "Failed to fetch track coordinates. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
+            return;
+          }
+
+          const track = result.track;
+
+          // Display track route modal
+          displayTrackRouteView(track);
+        } catch (error) {
+          console.error("Error viewing track route:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to load track route data. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
+        }
+      }
+
+      // Display track route view modal
+      function displayTrackRouteView(track) {
+        // Update track info
+        document.getElementById(
+          "trackRouteTitle"
+        ).textContent = `🛤️ Track Route: ${track.name}`;
+        document.getElementById("viewTrackName").textContent = track.name;
+        document.getElementById("viewTrackId").textContent = track.track_id;
+        document.getElementById("viewTrackRoute").textContent =
+          track.start_station && track.end_station
+            ? `${track.start_station} → ${track.end_station}`
+            : "Route not specified";
+        document.getElementById("viewTrackPoints").textContent =
+          track.points_count;
+        document.getElementById("viewTrackFilename").textContent =
+          track.filename || "N/A";
+
+        const uploadDate = new Date(track.uploaded_at).toLocaleString();
+        document.getElementById("viewTrackUploaded").textContent = uploadDate;
+
+        // Initialize track route map if not already initialized
+        if (!trackRouteMap) {
+          trackRouteMap = L.map("trackRouteMap").setView([6.9271, 79.8612], 13);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors",
+            maxZoom: 19,
+          }).addTo(trackRouteMap);
+        }
+
+        // Clear previous markers and polyline
+        trackRouteMarkers.forEach((marker) =>
+          trackRouteMap.removeLayer(marker)
+        );
+        trackRouteMarkers = [];
+        if (trackRoutePolyline) {
+          trackRouteMap.removeLayer(trackRoutePolyline);
+        }
+
+        // Display track coordinates on map
+        if (track.coordinates && track.coordinates.length > 0) {
+          const coordinates = track.coordinates.map((point) => [
+            point.latitude,
+            point.longitude,
+          ]);
+
+          // Add start marker (green)
+          if (coordinates.length > 0) {
+            const startMarker = L.marker(
+              [coordinates[0][0], coordinates[0][1]],
+              {
+                icon: L.divIcon({
+                  className: "custom-marker",
+                  html: '<div style="background-color: #4caf50; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white;"></div>',
+                  iconSize: [20, 20],
+                }),
+              }
+            )
+              .addTo(trackRouteMap)
+              .bindPopup(
+                `<b>🟢 Start: ${
+                  track.start_station || "Track Start"
+                }</b><br>Lat: ${coordinates[0][0].toFixed(
+                  6
+                )}<br>Lon: ${coordinates[0][1].toFixed(6)}`
+              );
+            trackRouteMarkers.push(startMarker);
+          }
+
+          // Add end marker (red)
+          if (coordinates.length > 1) {
+            const lastPoint = coordinates[coordinates.length - 1];
+            const endMarker = L.marker([lastPoint[0], lastPoint[1]], {
+              icon: L.divIcon({
+                className: "custom-marker",
+                html: '<div style="background-color: #f44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white;"></div>',
+                iconSize: [20, 20],
+              }),
+            })
+              .addTo(trackRouteMap)
+              .bindPopup(
+                `<b>🔴 End: ${
+                  track.end_station || "Track End"
+                }</b><br>Lat: ${lastPoint[0].toFixed(
+                  6
+                )}<br>Lon: ${lastPoint[1].toFixed(6)}`
+              );
+            trackRouteMarkers.push(endMarker);
+          }
+
+          // Draw track route line
+          trackRoutePolyline = L.polyline(coordinates, {
+            color: "#ff9800",
+            weight: 4,
+            opacity: 0.8,
+          }).addTo(trackRouteMap);
+
+          // Fit map to show the entire track
+          const bounds = L.latLngBounds(coordinates);
+          trackRouteMap.fitBounds(bounds, { padding: [20, 20] });
+        }
+
+        // Show modal
+        document.getElementById("trackRouteModal").style.display = "block";
+      }
+
+      // Close track route modal
+      function closeTrackRouteModal() {
+        document.getElementById("trackRouteModal").style.display = "none";
+      }
+
       // Close modal when clicking outside
       window.addEventListener("click", function (event) {
-        const modal = document.getElementById("sessionViewModal");
-        if (event.target === modal) {
+        const sessionModal = document.getElementById("sessionViewModal");
+        if (event.target === sessionModal) {
           closeSessionViewModal();
+        }
+        const trackRouteModal = document.getElementById("trackRouteModal");
+        if (event.target === trackRouteModal) {
+          closeTrackRouteModal();
         }
         const successModal = document.getElementById("successModal");
         if (event.target === successModal) {
@@ -2088,6 +3499,1075 @@
         } else if (tabName === "sessions") {
           document.getElementById("sessionsTab").classList.add("active");
           tabButtons[1].classList.add("active");
+        } else if (tabName === "tracks") {
+          document.getElementById("tracksTab").classList.add("active");
+          tabButtons[2].classList.add("active");
+          // Load tracks when tab is opened
+          fetchTracks();
+        } else if (tabName === "simulation") {
+          document.getElementById("simulationTab").classList.add("active");
+          tabButtons[3].classList.add("active");
+          // Initialize simulation when tab is opened
+          initializeSimulation();
+        }
+      }
+
+      // ==== Track Data Management Functions ====
+
+      // Fetch and display all tracks
+      async function fetchTracks() {
+        try {
+          const response = await fetch(TRACKS_API_URL);
+          const result = await response.json();
+
+          const tracksList = document.getElementById("tracksList");
+
+          if (result.success && result.tracks.length > 0) {
+            tracksList.innerHTML = result.tracks
+              .map((track) => createTrackItem(track))
+              .join("");
+          } else {
+            tracksList.innerHTML = `
+              <div style="text-align: center; padding: 40px; color: #999;">
+                <p style="font-size: 1.2rem; margin-bottom: 10px;">📭 No track data uploaded yet</p>
+                <p>Upload a CSV file to get started</p>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("Error fetching tracks:", error);
+          document.getElementById("tracksList").innerHTML = `
+            <p style="text-align: center; color: #f44336;">Error loading tracks</p>
+          `;
+        }
+      }
+
+      // Create track item HTML
+      function createTrackItem(track) {
+        const isActive = track.is_active;
+        const activeLabel = isActive
+          ? '<span style="background: #4caf50; color: white; padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: 600;">✅ ACTIVE</span>'
+          : "";
+        const uploadDate = new Date(track.uploaded_at).toLocaleString();
+
+        return `
+          <div class="session-item" style="${
+            isActive ? "border-left-color: #4caf50;" : ""
+          }">
+            <div class="session-header">
+              <div class="session-title">
+                🛤️ ${track.name || track.track_id}
+                ${activeLabel}
+              </div>
+            </div>
+            <div class="session-info">
+              <div><strong>Track ID:</strong> ${track.track_id}</div>
+              <div><strong>Filename:</strong> ${track.filename || "N/A"}</div>
+              ${
+                track.start_station
+                  ? `<div><strong>Route:</strong> ${track.start_station} → ${track.end_station}</div>`
+                  : ""
+              }
+              <div><strong>GPS Points:</strong> ${
+                track.points_count || 0
+              } coordinates</div>
+              <div><strong>Uploaded:</strong> ${uploadDate}</div>
+            </div>
+            <div class="session-buttons">
+              <button class="btn-small" style="background: #2196f3; color: white;" onclick="viewTrackRoute('${
+                track.track_id
+              }', '${track.name}')">
+                🗺️ View Route
+              </button>
+              ${
+                !isActive
+                  ? `<button class="btn-small" style="background: #4caf50; color: white;" onclick="activateTrack('${track.track_id}', '${track.name}')">
+                      ✅ Use This Track
+                    </button>`
+                  : `<span style="color: #4caf50; font-weight: 600;">Currently in use for collision detection</span>`
+              }
+              <button class="btn-small" style="background: #f44336; color: white;" onclick="deleteTrack('${
+                track.track_id
+              }', '${track.name}')">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Upload track data
+      async function uploadTrackData(event) {
+        event.preventDefault();
+
+        const trackName = document.getElementById("trackName").value;
+        const startStation = document.getElementById("startStation").value;
+        const endStation = document.getElementById("endStation").value;
+        const fileInput = document.getElementById("trackFile");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          Swal.fire({
+            icon: "warning",
+            title: "No File Selected",
+            text: "Please select a CSV file to upload.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#ff9800",
+          });
+          return;
+        }
+
+        // Show loading
+        const uploadBtn = document.getElementById("uploadBtn");
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "⏳ Uploading...";
+
+        try {
+          // Read file content
+          const fileContent = await file.text();
+
+          // Send to server
+          const response = await fetch(`${TRACKS_API_URL}/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              file_content: fileContent,
+              filename: file.name,
+              name: trackName,
+              start_station: startStation,
+              end_station: endStation,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Track Uploaded!",
+              html: `
+                <div style="text-align: left; margin: 20px 0;">
+                  <p><strong>Track ID:</strong> ${result.track.track_id}</p>
+                  <p><strong>GPS Points:</strong> ${result.track.points_count}</p>
+                  <p><strong>Status:</strong> Ready to use</p>
+                </div>
+              `,
+              confirmButtonText: "Awesome!",
+              confirmButtonColor: "#4caf50",
+              timer: 4000,
+              timerProgressBar: true,
+            });
+
+            // Reset form
+            document.getElementById("trackUploadForm").reset();
+
+            // Refresh track list
+            fetchTracks();
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Upload Failed",
+              text:
+                result.detail ||
+                "Failed to upload track. Please check your file format.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
+          }
+        } catch (error) {
+          console.error("Error uploading track:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Upload Error",
+            text: "Unable to upload track. Please check your file format and try again.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = "📤 Upload Track Data";
+        }
+      }
+
+      // Activate track
+      async function activateTrack(trackId, trackName) {
+        const result = await Swal.fire({
+          title: "Activate Track?",
+          html: `
+            <div style="text-align: left; margin: 20px 0;">
+              <p><strong>Track:</strong> "${trackName}"</p>
+              <p>This will:</p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Set it as the active track for collision detection</li>
+                <li>Reset all current collision states</li>
+                <li>Clear all track locks</li>
+              </ul>
+            </div>
+          `,
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Activate Track",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#4caf50",
+          cancelButtonColor: "#6c757d",
+          reverseButtons: true,
+        });
+
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `${TRACKS_API_URL}/${trackId}/activate`,
+            {
+              method: "POST",
+            }
+          );
+
+          const result = await response.json();
+
+          if (result.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Track Activated!",
+              text: `"${trackName}" is now being used for collision detection.`,
+              confirmButtonText: "Great!",
+              confirmButtonColor: "#4caf50",
+              timer: 3000,
+              timerProgressBar: true,
+              showConfirmButton: true,
+            });
+            fetchTracks();
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Activation Failed",
+              text: "Failed to activate track. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
+          }
+        } catch (error) {
+          console.error("Error activating track:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to connect to server. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
+        }
+      }
+
+      // Delete track
+      async function deleteTrack(trackId, trackName) {
+        const result = await Swal.fire({
+          title: "Delete Track?",
+          html: `
+            <div style="text-align: left; margin: 20px 0;">
+              <p><strong>Track:</strong> "${trackName}"</p>
+              <p><strong>⚠️ Warning:</strong> This action cannot be undone!</p>
+              <p>This will permanently remove the track from the system.</p>
+            </div>
+          `,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Yes, Delete",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#f44336",
+          cancelButtonColor: "#6c757d",
+          reverseButtons: true,
+        });
+
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${TRACKS_API_URL}/${trackId}`, {
+            method: "DELETE",
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Track Deleted!",
+              text: "Track has been successfully removed from the system.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#4caf50",
+              timer: 2500,
+              timerProgressBar: true,
+            });
+            fetchTracks();
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Deletion Failed",
+              text: "Failed to delete track. Please try again.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#f44336",
+            });
+          }
+        } catch (error) {
+          console.error("Error deleting track:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Connection Error",
+            text: "Unable to delete track. Please check your connection.",
+            confirmButtonText: "OK",
+            confirmButtonColor: "#f44336",
+          });
+        }
+      }
+
+      // ==== Collision Detection Functions ====
+
+      // Initialize alarm sound
+      function initAlarmSound() {
+        // Create audio context for alarm sound
+        alarmSound = new Audio();
+        // Use a data URL for alarm sound (beep pattern)
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        alarmSound.context = audioContext;
+      }
+
+      // Play alarm sound
+      function playAlarmSound() {
+        try {
+          // Create oscillator for alarm sound
+          const context = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          const oscillator = context.createOscillator();
+          const gainNode = context.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(context.destination);
+
+          oscillator.frequency.value = 800; // Frequency in Hz
+          oscillator.type = "sine";
+
+          gainNode.gain.setValueAtTime(0.3, context.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(
+            0.01,
+            context.currentTime + 0.5
+          );
+
+          oscillator.start(context.currentTime);
+          oscillator.stop(context.currentTime + 0.5);
+
+          // Play multiple beeps
+          setTimeout(() => playAlarmSound(), 600);
+        } catch (error) {
+          console.error("Error playing alarm:", error);
+        }
+      }
+
+      // Stop alarm sound
+      function stopAlarmSound() {
+        if (alarmSound && alarmSound.context) {
+          alarmSound.context.close();
+          alarmSound = null;
+        }
+      }
+
+      // Check collision status
+      async function checkCollisionStatus() {
+        try {
+          // Check all train statuses
+          const response = await fetch(TRAIN_API_URL);
+          const result = await response.json();
+
+          if (result.success && result.trains) {
+            // Check if any train has collision detected
+            const collisionTrains = result.trains.filter(
+              (train) => train.collision_detected
+            );
+
+            if (collisionTrains.length > 0) {
+              if (!collisionDetected) {
+                // Collision just detected!
+                collisionDetected = true;
+                showCollisionWarning(collisionTrains);
+                playAlarmSound();
+              } else {
+                // Update collision info
+                updateCollisionWarning(collisionTrains);
+              }
+            } else {
+              if (collisionDetected) {
+                // Collision cleared
+                collisionDetected = false;
+                hideCollisionWarning();
+                stopAlarmSound();
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error checking collision status:", error);
+        }
+      }
+
+      // Play collision warning sound
+      function playCollisionSound() {
+        const audio = document.getElementById("collisionSound");
+        if (audio) {
+          audio.currentTime = 0;
+          audio.loop = true;
+          audio
+            .play()
+            .catch((err) => console.log("Audio play prevented:", err));
+        }
+      }
+
+      // Test collision sound function (for testing purposes)
+      function testCollisionSound() {
+        console.log("🔊 Testing collision warning sound...");
+        playCollisionSound();
+
+        // Show test notification
+        Swal.fire({
+          title: "🔊 Sound Test",
+          text: "Collision warning sound is now playing. You should hear an alert sound.",
+          icon: "info",
+          timer: 5000,
+          showConfirmButton: true,
+          confirmButtonText: "Stop Sound & Close",
+        }).then(() => {
+          stopCollisionSound();
+          console.log("🔇 Test sound stopped");
+        });
+      }
+
+      // Stop collision warning sound
+      function stopCollisionSound() {
+        const audio = document.getElementById("collisionSound");
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      }
+
+      // Show collision warning
+      function showCollisionWarning(trains) {
+        const panel = document.getElementById("collisionWarningPanel");
+        const trainsList = trains
+          .map((t) => `${t.train_id} (${t.device_id})`)
+          .join(" & ");
+        const trackInfo = trains[0]?.current_track || "Unknown";
+
+        panel.innerHTML = `
+          <div class="collision-warning">
+            <div class="collision-light">🚨</div>
+            <div class="collision-title">⚠️ COLLISION ALERT ⚠️</div>
+            <div class="collision-message">
+              Multiple trains detected on the same track!
+            </div>
+            <div class="collision-details">
+              <div style="font-size: 1.1rem; margin-bottom: 10px;">
+                <strong>🚂 Trains Involved:</strong><br>
+                ${trainsList}
+              </div>
+              <div style="font-size: 1rem;">
+                <strong>🛤️ Track:</strong> ${trackInfo}
+              </div>
+              <div style="margin-top: 15px; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px;">
+                ⚠️ BUZZER ACTIVATED ON ALL TRAINS ⚠️
+              </div>
+            </div>
+          </div>
+        `;
+        panel.style.display = "block";
+
+        // Play warning sound
+        playCollisionSound();
+
+        // Scroll to top to show warning
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      // Update collision warning
+      function updateCollisionWarning(trains) {
+        // Update the warning with latest info
+        showCollisionWarning(trains);
+      }
+
+      // Hide collision warning
+      function hideCollisionWarning() {
+        const panel = document.getElementById("collisionWarningPanel");
+
+        // Stop warning sound
+        stopCollisionSound();
+
+        panel.innerHTML = `
+          <div class="collision-safe">
+            <div class="safe-light">✅</div>
+            <div style="font-size: 1.3rem; font-weight: bold;">All Clear</div>
+            <div style="font-size: 1rem; margin-top: 8px;">No collision detected. Tracks are safe.</div>
+          </div>
+        `;
+
+        // Hide after 3 seconds
+        setTimeout(() => {
+          panel.style.display = "none";
+        }, 3000);
+      }
+
+      // Start collision monitoring
+      function startCollisionMonitoring() {
+        // Check immediately
+        checkCollisionStatus();
+
+        // Check every 3 seconds
+        collisionCheckInterval = setInterval(checkCollisionStatus, 3000);
+        console.log("✅ Collision monitoring started");
+      }
+
+      // Stop collision monitoring
+      function stopCollisionMonitoring() {
+        if (collisionCheckInterval) {
+          clearInterval(collisionCheckInterval);
+          collisionCheckInterval = null;
+        }
+        stopAlarmSound();
+      }
+
+      // Initialize collision detection when page loads
+      window.addEventListener("DOMContentLoaded", () => {
+        initAlarmSound();
+        startCollisionMonitoring();
+        console.log("🛤️ Collision Detection System Active");
+      });
+
+      // ==== Simulation Functions ====
+
+      // Simulation state
+      let simulationState = {
+        train1: {
+          active: false,
+          position: 0,
+          track: "track1",
+          station: "kaluthara",
+          interval: null,
+          trainId: "TRAIN_01",
+          deviceId: "ESP32_GPS_01",
+        },
+        train2: {
+          active: false,
+          position: 0,
+          track: "track1",
+          station: "panadura",
+          interval: null,
+          trainId: "TRAIN_02",
+          deviceId: "ESP32_GPS_02",
+        },
+        collisionDetected: false,
+        buzzerActive: false,
+        alarmInterval: null,
+      };
+
+      // Initialize simulation
+      async function initializeSimulation() {
+        console.log("🎮 Simulation initialized");
+        await resetSimulation();
+      }
+
+      // Reset simulation
+      async function resetSimulation() {
+        // Stop all trains
+        stopTrainSimulation("train1");
+        stopTrainSimulation("train2");
+
+        // Reset positions
+        simulationState.train1.position = 0;
+        simulationState.train2.position = 0;
+
+        document.getElementById("train1Position").value = 0;
+        document.getElementById("train2Position").value = 0;
+
+        // Reset UI
+        updateTrainPosition("train1");
+        updateTrainPosition("train2");
+
+        // Clear collision and deactivate backend buzzers
+        if (simulationState.collisionDetected) {
+          simulationState.collisionDetected = false;
+          simulationState.buzzerActive = false;
+          await activateBackendBuzzers(false);
+          deactivateSimulationBuzzer();
+        } else {
+          // Make sure backend buzzers are off
+          await activateBackendBuzzers(false);
+        }
+
+        updateSimulationStatus();
+
+        console.log("🔄 Simulation reset");
+      }
+
+      // Update train position (manual slider)
+      function updateTrainPosition(trainId) {
+        const positionSlider = document.getElementById(trainId + "Position");
+        const positionLabel = document.getElementById(
+          trainId + "PositionLabel"
+        );
+        const trackSelect = document.getElementById(trainId + "Track");
+        const stationSelect = document.getElementById(trainId + "Station");
+
+        const position = parseInt(positionSlider.value);
+        positionLabel.textContent = position + "%";
+
+        simulationState[trainId].position = position;
+        simulationState[trainId].track = trackSelect.value;
+        simulationState[trainId].station = stationSelect.value;
+
+        // Update visual position
+        updateTrainVisual(trainId);
+
+        // Check collision
+        checkSimulationCollision();
+      }
+
+      // Update train visual position
+      function updateTrainVisual(trainId) {
+        const train = simulationState[trainId];
+        const track = train.track;
+        const position = train.position;
+
+        // Hide all train visuals for this train
+        document.getElementById(trainId + "_track1").style.display = "none";
+        document.getElementById(trainId + "_track2").style.display = "none";
+
+        // Show train on correct track
+        const trainElement = document.getElementById(trainId + "_" + track);
+        trainElement.style.display = "block";
+
+        // Calculate position (0-100% of track length)
+        // If starting from Panadura (south), reverse the position
+        let visualPosition = position;
+        if (train.station === "panadura") {
+          visualPosition = 100 - position;
+        }
+
+        trainElement.style.left = visualPosition + "%";
+
+        // Remove transition during manual slider movement for immediate response
+        if (!train.active) {
+          trainElement.style.transition = "left 0.1s linear";
+        } else {
+          trainElement.style.transition = "left 0.5s ease";
+        }
+      }
+
+      // Start train simulation (auto-move)
+      function startTrainSimulation(trainId) {
+        if (simulationState[trainId].active) {
+          return;
+        }
+
+        simulationState[trainId].active = true;
+
+        // Update UI
+        document.getElementById(trainId + "StartBtn").style.display = "none";
+        document.getElementById(trainId + "StopBtn").style.display =
+          "inline-block";
+
+        // Disable controls while moving
+        document.getElementById(trainId + "Station").disabled = true;
+        document.getElementById(trainId + "Track").disabled = true;
+
+        // Start moving train
+        simulationState[trainId].interval = setInterval(() => {
+          moveTrainStep(trainId);
+        }, 200); // Update every 200ms
+
+        updateSimulationStatus();
+        console.log(`▶️ ${trainId} started`);
+      }
+
+      // Stop train simulation
+      function stopTrainSimulation(trainId) {
+        if (!simulationState[trainId].active) {
+          return;
+        }
+
+        simulationState[trainId].active = false;
+
+        // Clear interval to stop movement
+        if (simulationState[trainId].interval) {
+          clearInterval(simulationState[trainId].interval);
+          simulationState[trainId].interval = null;
+        }
+
+        // Update UI
+        document.getElementById(trainId + "StartBtn").style.display =
+          "inline-block";
+        document.getElementById(trainId + "StopBtn").style.display = "none";
+
+        // Enable controls (only if not in collision state)
+        if (!simulationState.collisionDetected) {
+          document.getElementById(trainId + "Station").disabled = false;
+          document.getElementById(trainId + "Track").disabled = false;
+        }
+
+        updateSimulationStatus();
+        console.log(
+          `⏹️ ${trainId} stopped at position ${simulationState[trainId].position}%`
+        );
+      }
+
+      // Move train one step
+      function moveTrainStep(trainId) {
+        const train = simulationState[trainId];
+
+        // Increment position
+        train.position += 1;
+
+        // Stop at end (100%)
+        if (train.position >= 100) {
+          train.position = 100;
+          stopTrainSimulation(trainId);
+        }
+
+        // Update slider and visual
+        document.getElementById(trainId + "Position").value = train.position;
+        document.getElementById(trainId + "PositionLabel").textContent =
+          train.position + "%";
+
+        updateTrainVisual(trainId);
+        checkSimulationCollision();
+      }
+
+      // Check for collision
+      async function checkSimulationCollision() {
+        const train1 = simulationState.train1;
+        const train2 = simulationState.train2;
+
+        // Both trains must have position > 0 to be considered "on track"
+        const train1OnTrack = train1.position > 0;
+        const train2OnTrack = train2.position > 0;
+
+        // Check if both trains are on the same track
+        const sameTrack = train1.track === train2.track;
+
+        // Collision detected if both trains are on the same track and both are on the track
+        const collision = train1OnTrack && train2OnTrack && sameTrack;
+
+        if (collision && !simulationState.collisionDetected) {
+          // Collision just detected!
+          simulationState.collisionDetected = true;
+          simulationState.buzzerActive = true;
+
+          // STOP BOTH TRAINS IMMEDIATELY FOR SAFETY!
+          stopTrainSimulation("train1");
+          stopTrainSimulation("train2");
+
+          // Add visual emergency stop indicator to trains
+          addEmergencyStopIndicator("train1");
+          addEmergencyStopIndicator("train2");
+
+          // Activate buzzers on backend for both trains
+          await activateBackendBuzzers(true);
+
+          activateSimulationBuzzer();
+
+          // Play collision warning sound
+          playCollisionSound();
+
+          console.log("🚨 COLLISION DETECTED in simulation!");
+          console.log("🛑 Both trains stopped immediately!");
+          console.log("🔊 Backend buzzers activated for both trains");
+        } else if (!collision && simulationState.collisionDetected) {
+          // Collision cleared
+          simulationState.collisionDetected = false;
+          simulationState.buzzerActive = false;
+
+          // Stop collision warning sound
+          stopCollisionSound();
+
+          // Remove emergency stop indicators
+          removeEmergencyStopIndicator("train1");
+          removeEmergencyStopIndicator("train2");
+
+          // Deactivate buzzers on backend for both trains
+          await activateBackendBuzzers(false);
+
+          deactivateSimulationBuzzer();
+          console.log("✅ Collision cleared in simulation");
+          console.log("🔇 Backend buzzers deactivated");
+        }
+
+        updateSimulationStatus();
+      }
+
+      // Add visual emergency stop indicator to train
+      function addEmergencyStopIndicator(trainId) {
+        const train = simulationState[trainId];
+        const trainElement = document.getElementById(
+          trainId + "_" + train.track
+        );
+
+        if (trainElement) {
+          // Add red pulsing border and stop icon
+          trainElement.style.border = "4px solid #ff0000";
+          trainElement.style.animation = "pulseWarning 1s infinite";
+
+          // Change the train emoji to stopped train
+          const trainContent = trainElement.querySelector("div");
+          if (trainContent) {
+            trainContent.innerHTML = "🚂❌";
+            trainContent.style.fontSize = "1.2rem";
+          }
+        }
+      }
+
+      // Remove visual emergency stop indicator from train
+      function removeEmergencyStopIndicator(trainId) {
+        const train = simulationState[trainId];
+        const trainElement = document.getElementById(
+          trainId + "_" + train.track
+        );
+
+        if (trainElement) {
+          // Remove red border and animation
+          trainElement.style.border = "none";
+          trainElement.style.animation = "none";
+
+          // Restore normal train emoji
+          const trainContent = trainElement.querySelector("div");
+          if (trainContent) {
+            trainContent.innerHTML = "🚂";
+            trainContent.style.fontSize = "1.5rem";
+          }
+        }
+      }
+
+      // Activate/deactivate backend buzzers for both trains
+      async function activateBackendBuzzers(activate) {
+        const statusMsg = document.getElementById("backendStatusMsg");
+        statusMsg.textContent = activate
+          ? "⏳ Activating backend buzzers..."
+          : "⏳ Deactivating backend buzzers...";
+        statusMsg.style.color = "#ff9800";
+
+        try {
+          // Update Train 1 (TRAIN_01)
+          const train1Response = await fetch(TRAIN_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              train_id: simulationState.train1.trainId,
+              active: activate,
+            }),
+          });
+
+          // Update Train 2 (TRAIN_02)
+          const train2Response = await fetch(TRAIN_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              train_id: simulationState.train2.trainId,
+              active: activate,
+            }),
+          });
+
+          const train1Result = await train1Response.json();
+          const train2Result = await train2Response.json();
+
+          if (train1Result.success && train2Result.success) {
+            console.log(
+              `✅ Backend buzzers ${
+                activate ? "activated" : "deactivated"
+              } for both trains`
+            );
+
+            // Update backend buzzer status display
+            const buzzer1El = document.getElementById("simBackendBuzzer1");
+            const buzzer2El = document.getElementById("simBackendBuzzer2");
+
+            if (activate) {
+              buzzer1El.textContent = "ACTIVE 🔊";
+              buzzer1El.style.animation = "pulseWarning 1s infinite";
+              buzzer2El.textContent = "ACTIVE 🔊";
+              buzzer2El.style.animation = "pulseWarning 1s infinite";
+
+              statusMsg.textContent =
+                "✅ Backend buzzers activated successfully!";
+              statusMsg.style.color = "#f44336";
+            } else {
+              buzzer1El.textContent = "OFF";
+              buzzer1El.style.animation = "none";
+              buzzer2El.textContent = "OFF";
+              buzzer2El.style.animation = "none";
+
+              statusMsg.textContent = "✓ Backend buzzers deactivated";
+              statusMsg.style.color = "#4caf50";
+            }
+          } else {
+            console.error("❌ Failed to update backend buzzer status");
+            statusMsg.textContent = "❌ Failed to update backend buzzers";
+            statusMsg.style.color = "#f44336";
+          }
+        } catch (error) {
+          console.error("❌ Error updating backend buzzers:", error);
+          statusMsg.textContent = "❌ Error connecting to backend";
+          statusMsg.style.color = "#f44336";
+        }
+      }
+
+      // Activate buzzer alarm
+      function activateSimulationBuzzer() {
+        // Show collision alert
+        document.getElementById("simulationCollisionAlert").style.display =
+          "block";
+        document.getElementById("simulationSafeAlert").style.display = "none";
+
+        // Update collision track name
+        const trackName =
+          simulationState.train1.track === "track1"
+            ? "Track 1 (Up Line)"
+            : "Track 2 (Down Line)";
+        document.getElementById("collisionTrackName").textContent = trackName;
+
+        // Play alarm sound
+        playSimulationAlarm();
+      }
+
+      // Deactivate buzzer alarm
+      function deactivateSimulationBuzzer() {
+        // Hide collision alert
+        document.getElementById("simulationCollisionAlert").style.display =
+          "none";
+        document.getElementById("simulationSafeAlert").style.display = "block";
+
+        // Stop alarm sound
+        stopSimulationAlarm();
+
+        // Hide safe alert after 3 seconds
+        setTimeout(() => {
+          document.getElementById("simulationSafeAlert").style.display = "none";
+        }, 3000);
+      }
+
+      // Play alarm sound
+      function playSimulationAlarm() {
+        if (simulationState.alarmInterval) {
+          return; // Already playing
+        }
+
+        // Play beep sound repeatedly
+        simulationState.alarmInterval = setInterval(() => {
+          if (!simulationState.buzzerActive) {
+            stopSimulationAlarm();
+            return;
+          }
+
+          try {
+            const context = new (window.AudioContext ||
+              window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = "sine";
+
+            gainNode.gain.setValueAtTime(0.3, context.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(
+              0.01,
+              context.currentTime + 0.5
+            );
+
+            oscillator.start(context.currentTime);
+            oscillator.stop(context.currentTime + 0.5);
+          } catch (error) {
+            console.error("Error playing alarm:", error);
+          }
+        }, 600); // Beep every 600ms
+      }
+
+      // Stop alarm sound
+      function stopSimulationAlarm() {
+        if (simulationState.alarmInterval) {
+          clearInterval(simulationState.alarmInterval);
+          simulationState.alarmInterval = null;
+        }
+      }
+
+      // Update simulation status display
+      function updateSimulationStatus() {
+        const train1 = simulationState.train1;
+        const train2 = simulationState.train2;
+
+        // Train 1 status
+        const train1StatusEl = document.getElementById("simTrain1Status");
+        if (train1.active) {
+          train1StatusEl.textContent = "Moving (" + train1.position + "%)";
+          train1StatusEl.style.color = "#4caf50";
+        } else if (train1.position > 0) {
+          train1StatusEl.textContent = "Stopped (" + train1.position + "%)";
+          train1StatusEl.style.color = "#ff9800";
+        } else {
+          train1StatusEl.textContent = "Ready";
+          train1StatusEl.style.color = "white";
+        }
+
+        // Train 2 status
+        const train2StatusEl = document.getElementById("simTrain2Status");
+        if (train2.active) {
+          train2StatusEl.textContent = "Moving (" + train2.position + "%)";
+          train2StatusEl.style.color = "#2196f3";
+        } else if (train2.position > 0) {
+          train2StatusEl.textContent = "Stopped (" + train2.position + "%)";
+          train2StatusEl.style.color = "#ff9800";
+        } else {
+          train2StatusEl.textContent = "Ready";
+          train2StatusEl.style.color = "white";
+        }
+
+        // Track info
+        document.getElementById("simTrain1Track").textContent =
+          train1.position > 0
+            ? train1.track === "track1"
+              ? "Track 1"
+              : "Track 2"
+            : "-";
+        document.getElementById("simTrain2Track").textContent =
+          train2.position > 0
+            ? train2.track === "track1"
+              ? "Track 1"
+              : "Track 2"
+            : "-";
+
+        // Collision risk
+        const collisionRiskEl = document.getElementById("simCollisionRisk");
+        if (simulationState.collisionDetected) {
+          collisionRiskEl.textContent = "HIGH - COLLISION!";
+          collisionRiskEl.style.animation = "pulseWarning 1s infinite";
+        } else {
+          collisionRiskEl.textContent = "None";
+          collisionRiskEl.style.animation = "none";
+        }
+
+        // Buzzer status
+        const buzzerStatusEl = document.getElementById("simBuzzerStatus");
+        if (simulationState.buzzerActive) {
+          buzzerStatusEl.textContent = "ACTIVE 🔊";
+          buzzerStatusEl.style.animation = "pulseWarning 1s infinite";
+        } else {
+          buzzerStatusEl.textContent = "OFF";
+          buzzerStatusEl.style.animation = "none";
         }
       }
     </script>

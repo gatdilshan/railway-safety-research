@@ -9,8 +9,11 @@
 const char* DEVICE_ID = "ESP32_GPS_01";  // 🔧 CHANGE THIS FOR EACH DEVICE!
 
 // ==== Wi-Fi Credentials ====
-const char* ssid     = "Tyzon7";      
-const char* password = "11111111";
+// const char* ssid     = "Tyzon7";      
+// const char* password = "11111111";
+
+const char* ssid     = "Home_Fiber";      
+const char* password = "Fonseka@7";
 
 // ==== FastAPI Backend Endpoint ====
 // For localhost testing (ESP32 and computer on same network):
@@ -18,8 +21,8 @@ const char* password = "11111111";
 // Replace YOUR_SERVER_IP with your computer's IP address (use 'ipconfig' on Windows)
 //https://railway-safety-research.onrender.com/api/gps
 // Example: "http://192.168.1.100:8000/api/gps"
-const char* mongoAPIEndpoint = "http://192.168.1.9:8000/api/gps";  // Your computer's IP
-const char* trainStatusEndpoint = "http://192.168.1.9:8000/api/train/status";  // Train status API
+const char* mongoAPIEndpoint = "https://36208423b9ca.ngrok-free.app/api/gps";  // Your computer's IP
+const char* trainStatusEndpoint = "https://36208423b9ca.ngrok-free.app/api/train/status";  // Train status API
 // The FastAPI server now runs on port 8000  
 
 // ==== GPS ====
@@ -95,12 +98,16 @@ bool checkTrainStatus() {
 
   HTTPClient http;
   http.setTimeout(5000);  // Set 5 second timeout
-  http.begin(trainStatusEndpoint);
+  
+  // Build URL with device_id parameter
+  String url = String(trainStatusEndpoint) + "?device_id=" + String(DEVICE_ID);
+  
+  http.begin(url);
   http.addHeader("Content-Type", "application/json");
   
   Serial.println("🔍 Checking train status...");
   Serial.print("📡 Connecting to: ");
-  Serial.println(trainStatusEndpoint);
+  Serial.println(url);
   
   // Send GET request
   int httpResponseCode = http.GET();
@@ -109,20 +116,41 @@ bool checkTrainStatus() {
     String response = http.getString();
     
     // Parse JSON response
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, response);
     
     if (!error) {
       bool active = doc["active"];
-      trainActive = active;
+      bool collision = doc["collision_detected"];
+      trainActive = active || collision;  // Activate if either active or collision
       
       Serial.print("🚂 Train Status: ");
-      Serial.println(active ? "ACTIVE ⚠️" : "INACTIVE");
+      Serial.println(active ? "ACTIVE" : "INACTIVE");
       
-      // Control buzzer and LED based on status
+      if (collision) {
+        Serial.println("🚨 COLLISION DETECTED! ⚠️⚠️⚠️");
+        Serial.print("   Collision with: ");
+        JsonArray collisionWith = doc["collision_with"];
+        for (JsonVariant train : collisionWith) {
+          Serial.print(train.as<const char*>());
+          Serial.print(" ");
+        }
+        Serial.println();
+      }
+      
+      const char* currentTrack = doc["current_track"];
+      if (currentTrack) {
+        Serial.print("   Current Track: ");
+        Serial.println(currentTrack);
+      }
+      
+      // Control buzzer and LED based on status (active OR collision)
       if (trainActive) {
         digitalWrite(LED_PIN, HIGH);    // Turn on LED
         digitalWrite(BUZZER_PIN, HIGH); // Turn on buzzer
+        if (collision) {
+          Serial.println("🔊 BUZZER ACTIVATED - COLLISION WARNING!");
+        }
       } else {
         digitalWrite(LED_PIN, LOW);     // Turn off LED
         digitalWrite(BUZZER_PIN, LOW);  // Turn off buzzer
@@ -147,7 +175,7 @@ bool checkTrainStatus() {
       Serial.println("   3. Firewall blocking the connection");
       Serial.println("   4. ESP32 and computer on different networks");
       Serial.print("   Current endpoint: ");
-      Serial.println(trainStatusEndpoint);
+      Serial.println(url);
       Serial.print("   WiFi Status: ");
       Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
       Serial.print("   ESP32 IP: ");
