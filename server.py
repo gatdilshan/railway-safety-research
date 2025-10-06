@@ -148,6 +148,14 @@ class Session(BaseModel):
             datetime: lambda v: v.isoformat()
         }
 
+class RealTestingStartRequest(BaseModel):
+    train_id: str
+    track_id: str
+
+class RealTestingStopRequest(BaseModel):
+    train_id: str
+    track_id: Optional[str] = None
+
 class TrackPoint(BaseModel):
     latitude: float
     longitude: float
@@ -370,6 +378,126 @@ def detect_collision(train_id: str, device_id: str, track_id: str) -> Dict:
     
     return {"collision": False}
 
+# ==== Real Testing Trip Lifecycle ====
+
+@app.post("/api/real-testing/start")
+async def start_real_testing(request: RealTestingStartRequest):
+    """
+    Start a real-world testing trip for a train on a specific track.
+    Locks the track and stores the selected track on the train.
+    """
+    try:
+        if track_sections_collection is None or train_collection is None or track_locks_collection is None:
+            raise HTTPException(
+                status_code=503,
+                detail="MongoDB not connected - service unavailable"
+            )
+
+        # Validate track exists
+        track = track_sections_collection.find_one({"track_id": request.track_id})
+        if not track:
+            raise HTTPException(status_code=404, detail="Track not found")
+
+        # Set selected track on train
+        train_doc = train_collection.find_one({"train_id": request.train_id})
+        if not train_doc:
+            raise HTTPException(status_code=404, detail="Train not found")
+
+        # Try to lock track to this train
+        locked = lock_track(request.train_id, train_doc.get("device_id", ""), request.track_id)
+        if not locked:
+            raise HTTPException(status_code=409, detail="Track already locked by another train")
+
+        # Persist selected track and active state
+        train_collection.update_one(
+            {"train_id": request.train_id},
+            {
+                "$set": {
+                    "selected_track_id": request.track_id,
+                    "active": True,
+                    "current_track": request.track_id,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        # Mark track as active for visibility (does not deactivate others)
+        track_sections_collection.update_one(
+            {"track_id": request.track_id},
+            {"$set": {"is_active": True}}
+        )
+
+        return {
+            "success": True,
+            "message": "Real testing started",
+            "train_id": request.train_id,
+            "track_id": request.track_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error starting real testing: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start real testing: {str(e)}"
+        )
+
+@app.post("/api/real-testing/stop")
+async def stop_real_testing(request: RealTestingStopRequest):
+    """
+    Stop a real-world testing trip: unlock track and clear selection.
+    """
+    try:
+        if train_collection is None or track_locks_collection is None:
+            raise HTTPException(
+                status_code=503,
+                detail="MongoDB not connected - service unavailable"
+            )
+
+        # If track_id not provided, try to use the train's selected/current track
+        track_id = request.track_id
+        if not track_id:
+            train_doc = train_collection.find_one({"train_id": request.train_id})
+            track_id = (train_doc or {}).get("selected_track_id") or (train_doc or {}).get("current_track")
+
+        # Clear track lock(s) for this train and track
+        if track_id:
+            track_locks_collection.delete_many({
+                "lock_type": "track_lock",
+                "track_id": track_id,
+                "train_id": request.train_id
+            })
+
+        # Clear selected track from train and deactivate
+        train_collection.update_one(
+            {"train_id": request.train_id},
+            {
+                "$unset": {"selected_track_id": ""},
+                "$set": {
+                    "active": False,
+                    "current_track": None,
+                    "collision_detected": False,
+                    "collision_with": [],
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        return {
+            "success": True,
+            "message": "Real testing stopped",
+            "train_id": request.train_id,
+            "track_id": track_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error stopping real testing: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stop real testing: {str(e)}"
+        )
+
 def parse_csv_data(csv_content: str):
     """
     Parse CSV content and return coordinates
@@ -583,13 +711,18 @@ async def receive_gps_data(gps_data: GPSData):
         if train_doc:
             train_id = train_doc["train_id"]
             
-            # Get active track for collision detection
-            active_track = track_sections_collection.find_one({"is_active": True})
-            if not active_track:
-                # If no active track, get the first track
-                active_track = track_sections_collection.find_one()
-            
-            track_id = active_track["track_id"] if active_track else None
+            # Prefer explicitly selected track for real testing if present
+            selected_track_id = train_doc.get("selected_track_id")
+            if selected_track_id:
+                track_id = selected_track_id
+            else:
+                # Fallback to active track for collision detection
+                active_track = track_sections_collection.find_one({"is_active": True})
+                if not active_track:
+                    # If no active track, get the first track
+                    active_track = track_sections_collection.find_one()
+                
+                track_id = active_track["track_id"] if active_track else None
             
             if track_id:
                 match_result = check_gps_match_track(
@@ -772,6 +905,7 @@ async def get_train_status(device_id: Optional[str] = None, train_id: Optional[s
             "active": train_doc.get("active", False),
             "collision_detected": train_doc.get("collision_detected", False),
             "current_track": train_doc.get("current_track"),
+            "selected_track_id": train_doc.get("selected_track_id"),
             "collision_with": train_doc.get("collision_with", []),
             "updated_at": train_doc.get("updated_at", datetime.utcnow())
         }

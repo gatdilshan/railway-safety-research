@@ -1125,6 +1125,9 @@
           <button class="tab-button" onclick="switchTab('tracks')">
             <span class="tab-icon">🛤️</span> Track Data
           </button>
+          <button class="tab-button" onclick="switchTab('realTesting')">
+            <span class="tab-icon">🚆</span> Real Testing
+          </button>
           <button class="tab-button" onclick="switchTab('simulation')">
             <span class="tab-icon">🎮</span> Simulation
           </button>
@@ -1454,6 +1457,70 @@
           </div>
         </div>
         <!-- End Track Data Tab -->
+
+        <!-- Real Testing Tab -->
+        <div id="realTestingTab" class="tab-content">
+          <div class="card" style="margin-bottom: 0">
+            <h2>🚆 Real-World Testing</h2>
+            <p style="color: #666; margin-bottom: 20px">
+              Select a train and a recorded track, then start a real trip. The
+              selected track will be locked until you stop the trip.
+            </p>
+            <div
+              style="
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                flex-wrap: wrap;
+              "
+            >
+              <div>
+                <label
+                  for="realTrainSelect"
+                  style="display: block; margin-bottom: 6px"
+                  >Train</label
+                >
+                <select
+                  id="realTrainSelect"
+                  style="min-width: 220px; padding: 8px"
+                ></select>
+              </div>
+              <div>
+                <label
+                  for="realTrackSelect"
+                  style="display: block; margin-bottom: 6px"
+                  >Track</label
+                >
+                <select
+                  id="realTrackSelect"
+                  style="min-width: 280px; padding: 8px"
+                ></select>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center">
+                <button
+                  id="btnStartReal"
+                  class="refresh-btn"
+                  onclick="startRealTesting()"
+                >
+                  ▶️ Start Trip
+                </button>
+                <button
+                  id="btnStopReal"
+                  class="refresh-btn"
+                  onclick="stopRealTesting()"
+                  disabled
+                >
+                  ⏹️ Stop Trip
+                </button>
+              </div>
+            </div>
+            <div
+              id="realTestingStatus"
+              style="margin-top: 16px; color: #555"
+            ></div>
+          </div>
+        </div>
+        <!-- End Real Testing Tab -->
 
         <!-- Simulation Tab -->
         <div id="simulationTab" class="tab-content">
@@ -2309,6 +2376,10 @@
       const SESSIONS_API_URL = window.location.origin + "/api/sessions";
       const DEVICES_API_URL = window.location.origin + "/api/devices";
       const TRACKS_API_URL = window.location.origin + "/api/tracks";
+      const REAL_TESTING_START_URL =
+        window.location.origin + "/api/real-testing/start";
+      const REAL_TESTING_STOP_URL =
+        window.location.origin + "/api/real-testing/stop";
 
       // Collision detection variables
       let collisionDetected = false;
@@ -3504,9 +3575,13 @@
           tabButtons[2].classList.add("active");
           // Load tracks when tab is opened
           fetchTracks();
+        } else if (tabName === "realTesting") {
+          document.getElementById("realTestingTab").classList.add("active");
+          tabButtons[3].classList.add("active");
+          initializeRealTestingTab();
         } else if (tabName === "simulation") {
           document.getElementById("simulationTab").classList.add("active");
-          tabButtons[3].classList.add("active");
+          tabButtons[4].classList.add("active");
           // Initialize simulation when tab is opened
           initializeSimulation();
         }
@@ -3541,6 +3616,135 @@
           `;
         }
       }
+
+      // ==== Real Testing Functions ====
+      async function initializeRealTestingTab() {
+        await Promise.all([populateTrainOptions(), populateTrackOptions()]);
+        await refreshRealTestingStatusUI();
+      }
+
+      async function populateTrainOptions() {
+        const select = document.getElementById("realTrainSelect");
+        if (!select) return;
+        select.innerHTML = "<option>Loading trains...</option>";
+        try {
+          const res = await fetch(TRAIN_API_URL);
+          const data = await res.json();
+          if (!data.success) throw new Error("Failed to load trains");
+          const trains = data.trains || [];
+          select.innerHTML = trains
+            .map(
+              (t) =>
+                `<option value="${t.train_id}">${t.train_id} (${t.device_id})</option>`
+            )
+            .join("");
+        } catch (e) {
+          select.innerHTML = "<option>Error loading trains</option>";
+        }
+      }
+
+      async function populateTrackOptions() {
+        const select = document.getElementById("realTrackSelect");
+        if (!select) return;
+        select.innerHTML = "<option>Loading tracks...</option>";
+        try {
+          const res = await fetch(TRACKS_API_URL);
+          const data = await res.json();
+          const tracks = data.tracks || [];
+          select.innerHTML = tracks
+            .map(
+              (tr) =>
+                `<option value="${tr.track_id}">${tr.track_id} — ${tr.name}</option>`
+            )
+            .join("");
+        } catch (e) {
+          select.innerHTML = "<option>Error loading tracks</option>";
+        }
+      }
+
+      async function startRealTesting() {
+        const trainId = document.getElementById("realTrainSelect").value;
+        const trackId = document.getElementById("realTrackSelect").value;
+        const statusEl = document.getElementById("realTestingStatus");
+        statusEl.textContent = "Starting trip...";
+        try {
+          const res = await fetch(REAL_TESTING_START_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ train_id: trainId, track_id: trackId }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success)
+            throw new Error(data.detail || data.message || "Failed to start");
+          statusEl.textContent = `Trip started. Track ${trackId} locked for ${trainId}.`;
+          document.getElementById("btnStartReal").disabled = true;
+          document.getElementById("btnStopReal").disabled = false;
+        } catch (e) {
+          statusEl.textContent = `Error: ${e.message}`;
+        }
+      }
+
+      async function stopRealTesting() {
+        const trainId = document.getElementById("realTrainSelect").value;
+        const trackId = document.getElementById("realTrackSelect").value;
+        const statusEl = document.getElementById("realTestingStatus");
+        statusEl.textContent = "Stopping trip...";
+        try {
+          const res = await fetch(REAL_TESTING_STOP_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ train_id: trainId, track_id: trackId }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success)
+            throw new Error(data.detail || data.message || "Failed to stop");
+          statusEl.textContent = `Trip stopped. Track ${trackId} unlocked.`;
+          document.getElementById("btnStartReal").disabled = false;
+          document.getElementById("btnStopReal").disabled = true;
+        } catch (e) {
+          statusEl.textContent = `Error: ${e.message}`;
+        }
+      }
+
+      async function refreshRealTestingStatusUI() {
+        const trainSelect = document.getElementById("realTrainSelect");
+        if (!trainSelect || !trainSelect.value) return;
+        const trainId = trainSelect.value;
+        const statusEl = document.getElementById("realTestingStatus");
+        try {
+          const res = await fetch(
+            `${TRAIN_API_URL}?train_id=${encodeURIComponent(trainId)}`
+          );
+          const data = await res.json();
+          if (!data.success) {
+            statusEl.textContent = "Train not found";
+            return;
+          }
+          const selectedTrack = data.current_track || data.selected_track_id;
+          const active = data.active;
+          if (active && selectedTrack) {
+            statusEl.textContent = `Active on track ${selectedTrack}.`;
+            document.getElementById("btnStartReal").disabled = true;
+            document.getElementById("btnStopReal").disabled = false;
+            const trackSelect = document.getElementById("realTrackSelect");
+            if (trackSelect) trackSelect.value = selectedTrack;
+          } else {
+            statusEl.textContent = "Idle. No active trip.";
+            document.getElementById("btnStartReal").disabled = false;
+            document.getElementById("btnStopReal").disabled = true;
+          }
+        } catch (e) {
+          statusEl.textContent = "Error fetching status";
+        }
+      }
+
+      // keep UI reactive when the user changes selection
+      // these elements exist only on the Real Testing tab
+      document.addEventListener("change", (e) => {
+        if (e.target && e.target.id === "realTrainSelect") {
+          refreshRealTestingStatusUI();
+        }
+      });
 
       // Create track item HTML
       function createTrackItem(track) {
