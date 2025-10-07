@@ -1,28 +1,22 @@
 #include <TinyGPS++.h>
-#include <WiFi.h>   // Wi-Fi library
-#include <HTTPClient.h>  // HTTP client for API requests
-#include <ArduinoJson.h>  // JSON library for MongoDB data
+#include <WiFi.h>  
+#include <HTTPClient.h>  
+#include <ArduinoJson.h> 
 
 // ==== DEVICE CONFIGURATION ====
-// ⚠️ IMPORTANT: Change this for each ESP32 board to a unique ID
-// Examples: "ESP32_STATION_01", "ESP32_STATION_02", "ESP32_COLOMBO", "ESP32_GALLE"
-const char* DEVICE_ID = "ESP32_GPS_01";  // 🔧 CHANGE THIS FOR EACH DEVICE!
+const char* DEVICE_ID = "ESP32_GPS_01"; 
 
 // ==== Wi-Fi Credentials ====
-// const char* ssid     = "Tyzon7";      
-// const char* password = "11111111";
+const char* ssid     = "Tyzon7";      
+const char* password = "11111111";
 
-const char* ssid     = "Home_Fiber";      
-const char* password = "Fonseka@7";
+// const char* ssid     = "Home_Fiber";      
+// const char* password = "Fonseka@7";
 
 // ==== FastAPI Backend Endpoint ====
-// For localhost testing (ESP32 and computer on same network):
-// const char* mongoAPIEndpoint = "http://127.0.0.1:8000/api/gps";  // ❌ This won't work from ESP32!
-// Replace YOUR_SERVER_IP with your computer's IP address (use 'ipconfig' on Windows)
 //https://railway-safety-research.onrender.com/api/gps
-// Example: "http://192.168.1.100:8000/api/gps"
-const char* mongoAPIEndpoint = "https://36208423b9ca.ngrok-free.app/api/gps";  // Your computer's IP
-const char* trainStatusEndpoint = "https://36208423b9ca.ngrok-free.app/api/train/status";  // Train status API
+const char* mongoAPIEndpoint = "https://railway-safety-research.onrender.com/api/gps"; 
+const char* trainStatusEndpoint = "https://railway-safety-research.onrender.com/api/train/status"; 
 // The FastAPI server now runs on port 8000  
 
 // ==== GPS ====

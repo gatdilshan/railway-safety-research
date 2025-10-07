@@ -736,22 +736,25 @@ async def receive_gps_data(gps_data: GPSData):
             
             track_match_info = match_result
             
-            # If enough consecutive matches, lock the track
+            # If enough consecutive matches, lock the track ONLY during real testing
             if match_result.get("locked", False):
-                # Try to lock the track
-                lock_success = lock_track(train_id, gps_data.device_id, track_id)
-                
-                if lock_success:
-                    print(f"🔒 Track {track_id} locked by {train_id}")
-                else:
-                    print(f"⚠️ Track {track_id} already locked by another train!")
-                
-                # Check for collision
-                collision_info = detect_collision(train_id, gps_data.device_id, track_id)
-                
-                if collision_info.get("collision", False):
-                    print(f"🚨 COLLISION DETECTED on {track_id}!")
-                    print(f"   Trains involved: {collision_info['trains_involved']}")
+                # Only lock when a real testing trip is active and the matched track
+                # equals the train's explicitly selected track
+                if selected_track_id and selected_track_id == track_id:
+                    # Try to lock the track
+                    lock_success = lock_track(train_id, gps_data.device_id, track_id)
+                    
+                    if lock_success:
+                        print(f"🔒 Track {track_id} locked by {train_id}")
+                    else:
+                        print(f"⚠️ Track {track_id} already locked by another train!")
+                    
+                    # Check for collision
+                    collision_info = detect_collision(train_id, gps_data.device_id, track_id)
+                    
+                    if collision_info.get("collision", False):
+                        print(f"🚨 COLLISION DETECTED on {track_id}!")
+                        print(f"   Trains involved: {collision_info['trains_involved']}")
 
         print(f"📍 GPS Data saved: {gps_data.latitude}, {gps_data.longitude} from {gps_data.device_id} (Session: {active_session['_id']})")
 
