@@ -990,6 +990,100 @@
           padding: 15px;
         }
       }
+
+      /* Beautiful Status Message Animations */
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+        50% {
+          transform: scale(1.02);
+          box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      @keyframes glow {
+        0% {
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+        50% {
+          box-shadow: 0 4px 30px rgba(16, 185, 129, 0.6);
+        }
+        100% {
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      /* Distinct Trip Control Buttons */
+      .start-trip-btn {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: white !important;
+        border: 2px solid #047857 !important;
+        font-weight: 600 !important;
+        padding: 12px 20px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        transition: all 0.3s ease !important;
+        font-size: 14px !important;
+        min-width: 120px !important;
+      }
+
+      .start-trip-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669, #047857) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+      }
+
+      .start-trip-btn:disabled {
+        background: linear-gradient(135deg, #9ca3af, #6b7280) !important;
+        border-color: #6b7280 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        opacity: 0.6 !important;
+      }
+
+      .stop-trip-btn {
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        color: white !important;
+        border: 2px solid #b91c1c !important;
+        font-weight: 600 !important;
+        padding: 12px 20px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+        transition: all 0.3s ease !important;
+        font-size: 14px !important;
+        min-width: 120px !important;
+      }
+
+      .stop-trip-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4) !important;
+      }
+
+      .stop-trip-btn:disabled {
+        background: linear-gradient(135deg, #9ca3af, #6b7280) !important;
+        border-color: #6b7280 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        opacity: 0.6 !important;
+      }
     </style>
     <!-- Sri Lanka Railways Theme Overrides -->
     <style id="slr-theme">
@@ -1464,7 +1558,10 @@
             <h2>🚆 Real-World Testing</h2>
             <p style="color: #666; margin-bottom: 20px">
               Select a train and a recorded track, then start a real trip. The
-              selected track will be locked until you stop the trip.
+              track will automatically lock ONLY when your real-time GPS data
+              matches the actual track data (5 consecutive matches within 30m).
+              This ensures you're physically on the correct route before
+              locking.
             </p>
             <div
               style="
@@ -1499,14 +1596,14 @@
               <div style="display: flex; gap: 8px; align-items: center">
                 <button
                   id="btnStartReal"
-                  class="refresh-btn"
+                  class="start-trip-btn"
                   onclick="startRealTesting()"
                 >
                   ▶️ Start Trip
                 </button>
                 <button
                   id="btnStopReal"
-                  class="refresh-btn"
+                  class="stop-trip-btn"
                   onclick="stopRealTesting()"
                   disabled
                 >
@@ -1516,7 +1613,7 @@
             </div>
             <div
               id="realTestingStatus"
-              style="margin-top: 16px; color: #555"
+              style="margin-top: 20px; padding: 0; transition: all 0.3s ease"
             ></div>
           </div>
         </div>
@@ -2755,6 +2852,7 @@
       setInterval(fetchTrainStatus, 5000); // Check train status every 5 seconds
       setInterval(fetchSessions, 10000); // Check sessions every 10 seconds
       setInterval(fetchDevices, 10000); // Check devices every 10 seconds
+      setInterval(refreshRealTestingStatusUI, 5000); // Check real testing track lock status every 5 seconds
 
       // ==== Session Management Functions ====
 
@@ -3666,7 +3764,7 @@
         const trainId = document.getElementById("realTrainSelect").value;
         const trackId = document.getElementById("realTrackSelect").value;
         const statusEl = document.getElementById("realTestingStatus");
-        statusEl.textContent = "Starting trip...";
+        showStatusMessage("Starting trip...", "info", true);
         try {
           const res = await fetch(REAL_TESTING_START_URL, {
             method: "POST",
@@ -3676,11 +3774,15 @@
           const data = await res.json();
           if (!res.ok || !data.success)
             throw new Error(data.detail || data.message || "Failed to start");
-          statusEl.textContent = `Trip started. Track ${trackId} locked for ${trainId}.`;
+          showStatusMessage(
+            `🚂 Trip Started! Track ${trackId} will lock when GPS matches actual data (${trainId})`,
+            "info",
+            true
+          );
           document.getElementById("btnStartReal").disabled = true;
           document.getElementById("btnStopReal").disabled = false;
         } catch (e) {
-          statusEl.textContent = `Error: ${e.message}`;
+          showStatusMessage(`❌ Error: ${e.message}`, "error");
         }
       }
 
@@ -3688,7 +3790,7 @@
         const trainId = document.getElementById("realTrainSelect").value;
         const trackId = document.getElementById("realTrackSelect").value;
         const statusEl = document.getElementById("realTestingStatus");
-        statusEl.textContent = "Stopping trip...";
+        showStatusMessage("Stopping trip...", "info", true);
         try {
           const res = await fetch(REAL_TESTING_STOP_URL, {
             method: "POST",
@@ -3698,15 +3800,113 @@
           const data = await res.json();
           if (!res.ok || !data.success)
             throw new Error(data.detail || data.message || "Failed to stop");
-          statusEl.textContent = `Trip stopped. Track ${trackId} unlocked.`;
+          showStatusMessage(
+            `🔓 Track ${trackId} unlocked. Trip stopped successfully.`,
+            "info",
+            true
+          );
           document.getElementById("btnStartReal").disabled = false;
           document.getElementById("btnStopReal").disabled = true;
         } catch (e) {
-          statusEl.textContent = `Error: ${e.message}`;
+          showStatusMessage(`❌ Error: ${e.message}`, "error");
+        }
+      }
+
+      // Store last status to prevent unnecessary updates
+      let lastStatusMessage = "";
+      let lastStatusType = "";
+
+      // Beautiful status message function
+      function showStatusMessage(message, type = "info", forceUpdate = false) {
+        const statusEl = document.getElementById("realTestingStatus");
+
+        // Don't update if message and type are the same (unless forced)
+        if (
+          !forceUpdate &&
+          message === lastStatusMessage &&
+          type === lastStatusType
+        ) {
+          return;
+        }
+
+        lastStatusMessage = message;
+        lastStatusType = type;
+
+        // Clear any existing content
+        statusEl.innerHTML = "";
+
+        // Create the status card
+        const statusCard = document.createElement("div");
+        statusCard.style.cssText = `
+          padding: 16px 20px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 16px;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          border: 2px solid;
+          transition: all 0.3s ease;
+          opacity: 0;
+          transform: translateY(-10px);
+        `;
+
+        // Set styles based on type
+        switch (type) {
+          case "success":
+            statusCard.style.cssText += `
+              background: linear-gradient(135deg, #10B981, #059669);
+              color: white;
+              border-color: #047857;
+              box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+            `;
+            break;
+          case "error":
+            statusCard.style.cssText += `
+              background: linear-gradient(135deg, #EF4444, #DC2626);
+              color: white;
+              border-color: #B91C1C;
+              box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+            `;
+            break;
+          case "warning":
+            statusCard.style.cssText += `
+              background: linear-gradient(135deg, #F59E0B, #D97706);
+              color: white;
+              border-color: #B45309;
+              box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+            `;
+            break;
+          default: // info
+            statusCard.style.cssText += `
+              background: linear-gradient(135deg, #3B82F6, #2563EB);
+              color: white;
+              border-color: #1D4ED8;
+              box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            `;
+        }
+
+        statusCard.textContent = message;
+        statusEl.appendChild(statusCard);
+
+        // Smooth fade-in animation
+        setTimeout(() => {
+          statusCard.style.opacity = "1";
+          statusCard.style.transform = "translateY(0)";
+        }, 10);
+
+        // Add pulsing animation for locked status
+        if (message.includes("LOCKED") || message.includes("🔒")) {
+          statusCard.style.animation = "pulse 2s infinite";
         }
       }
 
       async function refreshRealTestingStatusUI() {
+        // Only refresh if Real Testing tab is active
+        const realTestingTab = document.getElementById("realTestingTab");
+        if (!realTestingTab || realTestingTab.style.display === "none") {
+          return;
+        }
+
         const trainSelect = document.getElementById("realTrainSelect");
         if (!trainSelect || !trainSelect.value) return;
         const trainId = trainSelect.value;
@@ -3717,24 +3917,58 @@
           );
           const data = await res.json();
           if (!data.success) {
-            statusEl.textContent = "Train not found";
+            showStatusMessage("❌ Train not found", "error");
             return;
           }
           const selectedTrack = data.current_track || data.selected_track_id;
           const active = data.active;
-          if (active && selectedTrack) {
-            statusEl.textContent = `Active on track ${selectedTrack}.`;
+
+          // Check if trip is in progress (selected_track_id exists)
+          if (data.selected_track_id) {
+            // Trip has been started, now check if track is actually locked
+            const trackStatusRes = await fetch(
+              `${window.location.origin}/api/tracks/${data.selected_track_id}/status`
+            );
+            const trackStatus = await trackStatusRes.json();
+
+            if (
+              trackStatus.locked &&
+              trackStatus.locks &&
+              trackStatus.locks.length > 0
+            ) {
+              // Track is actually locked
+              const trainLock = trackStatus.locks.find(
+                (lock) => lock.train_id === trainId
+              );
+              if (trainLock) {
+                showStatusMessage(
+                  `🔒 TRACK LOCKED! GPS matched - ${data.selected_track_id} is locked`,
+                  "success"
+                );
+              } else {
+                showStatusMessage(
+                  `⚠️ Track ${data.selected_track_id} locked by another train`,
+                  "warning"
+                );
+              }
+            } else {
+              // Trip started but track not locked yet - waiting for GPS match
+              showStatusMessage(
+                `🚂 Trip in progress on ${data.selected_track_id}. Waiting for GPS to match track data...`,
+                "info"
+              );
+            }
             document.getElementById("btnStartReal").disabled = true;
             document.getElementById("btnStopReal").disabled = false;
             const trackSelect = document.getElementById("realTrackSelect");
-            if (trackSelect) trackSelect.value = selectedTrack;
+            if (trackSelect) trackSelect.value = data.selected_track_id;
           } else {
-            statusEl.textContent = "Idle. No active trip.";
+            showStatusMessage("🚂 Idle. No active trip.", "info");
             document.getElementById("btnStartReal").disabled = false;
             document.getElementById("btnStopReal").disabled = true;
           }
         } catch (e) {
-          statusEl.textContent = "Error fetching status";
+          showStatusMessage("❌ Error fetching status", "error");
         }
       }
 

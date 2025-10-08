@@ -457,11 +457,20 @@ async def start_real_testing(request: RealTestingStartRequest):
             }
         )
 
-        # Mark track as active for visibility (does not deactivate others)
+        # Deactivate all other tracks first, then activate the selected track
+        track_sections_collection.update_many(
+            {},
+            {"$set": {"is_active": False}}
+        )
+        
+        # Activate only the selected track for collision detection
         track_sections_collection.update_one(
             {"track_id": request.track_id},
             {"$set": {"is_active": True}}
         )
+        
+        print(f"✅ Activated track: {request.track_id} for real testing")
+        print(f"🔄 Deactivated all other tracks")
 
         return {
             "success": True,
@@ -780,6 +789,11 @@ async def receive_gps_data(gps_data: GPSData):
             track_match_info = match_result
             
             # If enough consecutive matches, lock the track ONLY during real testing
+            if match_result.get("matched", False):
+                consecutive = match_result.get("consecutive_matches", 0)
+                required = REQUIRED_CONSECUTIVE_MATCHES
+                print(f"📍 GPS Match Progress: {consecutive}/{required} consecutive matches for {train_id} on {track_id}")
+                
             if match_result.get("locked", False):
                 # Only lock when a real testing trip is active and the matched track
                 # equals the train's explicitly selected track
@@ -788,7 +802,7 @@ async def receive_gps_data(gps_data: GPSData):
                     lock_success = lock_track(train_id, gps_data.device_id, track_id)
                     
                     if lock_success:
-                        print(f"🔒 Track {track_id} locked by {train_id}")
+                        print(f"🔒 Track {track_id} LOCKED by {train_id} - GPS data matched!")
                     else:
                         print(f"⚠️ Track {track_id} already locked by another train!")
                     
@@ -798,6 +812,8 @@ async def receive_gps_data(gps_data: GPSData):
                     if collision_info.get("collision", False):
                         print(f"🚨 COLLISION DETECTED on {track_id}!")
                         print(f"   Trains involved: {collision_info['trains_involved']}")
+                elif not selected_track_id:
+                    print(f"⚠️ GPS matched but no trip started - track not locked")
 
         print(f"📍 GPS Data saved: {gps_data.latitude}, {gps_data.longitude} from {gps_data.device_id} (Session: {active_session['_id']})")
 
