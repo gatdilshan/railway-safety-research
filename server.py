@@ -323,13 +323,13 @@ def lock_track(train_id: str, device_id: str, track_id: str) -> bool:
         "updated_at": datetime.utcnow()
     })
     
-    # Update train record
+    # Update train record - Do NOT set active=True here
+    # Active flag should ONLY be set when collision is detected
     train_collection.update_one(
         {"train_id": train_id},
         {
             "$set": {
                 "current_track": track_id,
-                "active": True,
                 "updated_at": datetime.utcnow()
             }
         }
@@ -408,13 +408,13 @@ async def start_real_testing(request: RealTestingStartRequest):
         if not locked:
             raise HTTPException(status_code=409, detail="Track already locked by another train")
 
-        # Persist selected track and active state
+        # Persist selected track - Do NOT set active=True here
+        # Active flag should ONLY be set when collision is detected
         train_collection.update_one(
             {"train_id": request.train_id},
             {
                 "$set": {
                     "selected_track_id": request.track_id,
-                    "active": True,
                     "current_track": request.track_id,
                     "updated_at": datetime.utcnow()
                 }
