@@ -254,18 +254,48 @@ def check_gps_match_track(device_id: str, track_id: str, gps_lat: float, gps_lon
             })
             consecutive = 1
         else:
-            # Update counter
-            consecutive = match_counter['consecutive_matches'] + 1
-            track_locks_collection.update_one(
-                {"match_key": match_key},
-                {
-                    "$set": {
-                        "consecutive_matches": consecutive,
-                        "last_matched_index": closest_idx,
-                        "updated_at": datetime.utcnow()
+            # Only increment if progressing along the track (not standing still)
+            last_idx = match_counter.get('last_matched_index', -1)
+            
+            # Require at least 2 indices of progress to count as movement
+            if closest_idx > last_idx + 1:
+                # Moving forward along the track
+                consecutive = match_counter['consecutive_matches'] + 1
+                track_locks_collection.update_one(
+                    {"match_key": match_key},
+                    {
+                        "$set": {
+                            "consecutive_matches": consecutive,
+                            "last_matched_index": closest_idx,
+                            "updated_at": datetime.utcnow()
+                        }
                     }
-                }
-            )
+                )
+            elif closest_idx == last_idx or closest_idx == last_idx + 1:
+                # Standing still or minimal movement - don't increment, keep same count
+                consecutive = match_counter['consecutive_matches']
+                track_locks_collection.update_one(
+                    {"match_key": match_key},
+                    {
+                        "$set": {
+                            "last_matched_index": closest_idx,
+                            "updated_at": datetime.utcnow()
+                        }
+                    }
+                )
+            else:
+                # Moving backward or jumping - reset counter
+                consecutive = 1
+                track_locks_collection.update_one(
+                    {"match_key": match_key},
+                    {
+                        "$set": {
+                            "consecutive_matches": 1,
+                            "last_matched_index": closest_idx,
+                            "updated_at": datetime.utcnow()
+                        }
+                    }
+                )
         
         return {
             "matched": True,
@@ -403,19 +433,25 @@ async def start_real_testing(request: RealTestingStartRequest):
         if not train_doc:
             raise HTTPException(status_code=404, detail="Train not found")
 
-        # Try to lock track to this train
-        locked = lock_track(request.train_id, train_doc.get("device_id", ""), request.track_id)
-        if not locked:
+        # DO NOT lock the track immediately - only lock after GPS matches
+        # Check if track is already locked by another train
+        existing_lock = track_locks_collection.find_one({
+            "lock_type": "track_lock",
+            "track_id": request.track_id,
+            "locked": True
+        })
+        
+        if existing_lock and existing_lock.get('train_id') != request.train_id:
             raise HTTPException(status_code=409, detail="Track already locked by another train")
 
         # Persist selected track - Do NOT set active=True here
         # Active flag should ONLY be set when collision is detected
+        # Track will be locked automatically when GPS matches for 5 consecutive points
         train_collection.update_one(
             {"train_id": request.train_id},
             {
                 "$set": {
                     "selected_track_id": request.track_id,
-                    "current_track": request.track_id,
                     "updated_at": datetime.utcnow()
                 }
             }
@@ -467,6 +503,13 @@ async def stop_real_testing(request: RealTestingStopRequest):
                 "track_id": track_id,
                 "train_id": request.train_id
             })
+        
+        # Also clear match counters for this train
+        train_doc = train_collection.find_one({"train_id": request.train_id})
+        if train_doc:
+            device_id = train_doc.get("device_id", "")
+            match_key = f"{device_id}_match_counter"
+            track_locks_collection.delete_one({"match_key": match_key})
 
         # Clear selected track from train and deactivate
         train_collection.update_one(
